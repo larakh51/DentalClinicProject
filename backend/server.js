@@ -10,7 +10,7 @@ const invoicesRoutes = require("./routes/invoicesRoutes");
 const medicalRecordsRoutes = require("./routes/medicalRecordsRoutes");
 
 const app = express();
-
+//
 app.use(
   cors({
     origin: "http://localhost:5173",
