@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
 require("dotenv").config();
 
 const authRoutes = require("./routes/authRoutes");
@@ -10,7 +11,7 @@ const invoicesRoutes = require("./routes/invoicesRoutes");
 const medicalRecordsRoutes = require("./routes/medicalRecordsRoutes");
 
 const app = express();
-//
+
 app.use(
   cors({
     origin: "http://localhost:5173",
@@ -19,6 +20,7 @@ app.use(
 );
 
 app.use(express.json());
+app.use(cookieParser());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", usersRoutes);
@@ -32,11 +34,6 @@ app.get("/", (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-
-const { notFound, errorHandler } = require("./middleWares/errorMiddleware");
-
-app.use(notFound);
-app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
