@@ -1,14 +1,15 @@
-import { Link, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
-  CalendarDays,
+  LayoutDashboard,
+  CalendarPlus,
+  Clock3,
   FileText,
-  HeartPulse,
-  Home,
+  CreditCard,
+  UserRound,
   LogOut,
-  Receipt,
-  Users,
 } from "lucide-react";
 import { useAuth } from "../../src/context/AuthContext";
+import styles from "./sidebar.module.css";
 
 function Sidebar() {
   const navigate = useNavigate();
@@ -19,69 +20,94 @@ function Sidebar() {
     navigate("/login");
   };
 
+  const patientLinks = [
+    {
+      to: "/patient-dashboard",
+      label: "Dashboard",
+      icon: <LayoutDashboard size={20} />,
+    },
+    {
+      to: "/book-appointment",
+      label: "Book Appointment",
+      icon: <CalendarPlus size={20} />,
+    },
+    {
+      to: "/my-appointments",
+      label: "My Appointments",
+      icon: <Clock3 size={20} />,
+    },
+    {
+      to: "/medical-records",
+      label: "Medical Record",
+      icon: <FileText size={20} />,
+    },
+    {
+      to: "/payments",
+      label: "Payments",
+      icon: <CreditCard size={20} />,
+    },
+    {
+      to: "/profile",
+      label: "Profile",
+      icon: <UserRound size={20} />,
+    },
+  ];
+
   return (
-    <aside className="sidebar">
-      <div className="sidebar-logo">
-        <div className="logo-icon">🦷</div>
-        <div>
-          <h2>Dental Clinic</h2>
-          <p>{user?.role}</p>
+    <aside className={styles.sidebar}>
+      <div className={styles.topSection}>
+        <div className={styles.brand}>
+          <div className={styles.logoBox}>🦷</div>
+
+          <div className={styles.brandText}>
+            <h2>Dental Clinic</h2>
+            <p>Patient Portal</p>
+          </div>
         </div>
+
+        <div className={styles.divider}></div>
+
+        <nav className={styles.nav}>
+          {user?.role === "patient" &&
+            patientLinks.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  isActive
+                    ? `${styles.navItem} ${styles.active}`
+                    : styles.navItem
+                }
+              >
+                <span className={styles.icon}>{item.icon}</span>
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+        </nav>
       </div>
 
-      <nav className="sidebar-nav">
-        {user?.role === "patient" && (
-          <>
-            <Link to="/patient-dashboard">
-              <Home size={18} /> Dashboard
-            </Link>
-            <Link to="/appointments">
-              <CalendarDays size={18} /> Appointments
-            </Link>
-            <Link to="/invoices">
-              <Receipt size={18} /> Invoices
-            </Link>
-          </>
-        )}
+      <div className={styles.bottomSection}>
+        <div className={styles.divider}></div>
 
-        {user?.role === "doctor" && (
-          <>
-            <Link to="/doctor-dashboard">
-              <Home size={18} /> Dashboard
-            </Link>
-            <Link to="/appointments">
-              <CalendarDays size={18} /> Schedule
-            </Link>
-            <Link to="/treatments">
-              <HeartPulse size={18} /> Treatments
-            </Link>
-            <Link to="/medical-records">
-              <FileText size={18} /> Medical Records
-            </Link>
-          </>
-        )}
+        <div className={styles.userCard}>
+          <div className={styles.avatar}>
+            {user?.firstName?.[0]}
+            {user?.lastName?.[0]}
+          </div>
 
-        {user?.role === "manager" && (
-          <>
-            <Link to="/manager-dashboard">
-              <Home size={18} /> Dashboard
-            </Link>
-            <Link to="/appointments">
-              <CalendarDays size={18} /> Appointments
-            </Link>
-            <Link to="/users">
-              <Users size={18} /> Users
-            </Link>
-            <Link to="/invoices">
-              <Receipt size={18} /> Invoices
-            </Link>
-          </>
-        )}
-      </nav>
+          <div className={styles.userInfo}>
+            <h4>
+              {user?.firstName} {user?.lastName}
+            </h4>
+            <p>{user?.email}</p>
+          </div>
+        </div>
 
-      <button className="logout-btn" onClick={handleLogout}>
-        <LogOut size={18} /> Logout
-      </button>
+        <button className={styles.logoutBtn} onClick={handleLogout}>
+          <LogOut size={18} />
+          <span>Logout</span>
+        </button>
+      </div>
     </aside>
   );
 }
