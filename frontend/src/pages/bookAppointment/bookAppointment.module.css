@@ -1,0 +1,259 @@
+* {
+  box-sizing: border-box;
+}
+
+.page {
+  min-height: 100vh;
+  background: #f6f7f9;
+  display: flex;
+  font-family: Arial, sans-serif;
+  color: #111827;
+}
+
+.main {
+  flex: 1;
+  min-height: 100vh;
+  background: #f6f7f9;
+}
+
+.topBar {
+  height: 76px;
+  background: #ffffff;
+  border-bottom: 1px solid #e1e1e1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 28px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.userCircle {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background: #dbeafe;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.content {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 34px 0 42px;
+}
+
+.pageHeader {
+  margin-bottom: 26px;
+}
+
+.pageHeader h1 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 36px;
+  color: #111827;
+  font-weight: 700;
+}
+
+.pageHeader p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 16px;
+}
+
+.formCard {
+  background: #ffffff;
+  border: 1px solid #dddddd;
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.cardHeader {
+  margin-bottom: 24px;
+}
+
+.cardHeader h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.cardHeader p {
+  margin: 8px 0 0;
+  font-size: 16px;
+  color: #717187;
+}
+
+.form {
+  width: 100%;
+}
+
+.field {
+  margin-bottom: 22px;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 9px;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.field select,
+.field input,
+.field textarea {
+  width: 100%;
+  border: none;
+  outline: none;
+  border-radius: 9px;
+  background: #f0f0f2;
+  color: #111827;
+  font-size: 14px;
+  padding: 0 13px;
+  font-family: Arial, sans-serif;
+}
+
+.field select,
+.field input {
+  height: 38px;
+}
+
+.field textarea {
+  height: 64px;
+  padding-top: 13px;
+  resize: none;
+}
+
+.field select {
+  appearance: auto;
+  color: #6b7280;
+}
+
+.field input::placeholder,
+.field textarea::placeholder {
+  color: #717187;
+}
+
+.field select:focus,
+.field input:focus,
+.field textarea:focus {
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
+  background: #ffffff;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 86px;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.confirmBtn {
+  height: 38px;
+  border: none;
+  border-radius: 8px;
+  background: #030217;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.confirmBtn:hover {
+  background: #090827;
+}
+
+.cancelBtn {
+  height: 38px;
+  border: 1px solid #dddddd;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cancelBtn:hover {
+  background: #f8fafc;
+}
+
+.infoCard {
+  background: #ffffff;
+  border: 1px solid #dddddd;
+  border-radius: 14px;
+  padding: 24px;
+}
+
+.infoCard h3 {
+  margin: 0 0 12px;
+  color: #334155;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.infoCard ul {
+  margin: 0;
+  padding-left: 22px;
+  color: #52617a;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.errorBox {
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: 9px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.successBox {
+  background: #dcfce7;
+  color: #166534;
+  border-radius: 9px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+@media (max-width: 1100px) {
+  .main {
+    margin-left: 0;
+  }
+
+  .content {
+    max-width: 92%;
+  }
+}
+
+@media (max-width: 650px) {
+  .content {
+    padding: 24px 16px;
+    max-width: 100%;
+  }
+
+  .actions {
+    grid-template-columns: 1fr;
+  }
+
+  .cancelBtn {
+    width: 100%;
+  }
+}
