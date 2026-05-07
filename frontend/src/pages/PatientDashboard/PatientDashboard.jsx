@@ -9,8 +9,8 @@ import {
   Pill,
   Clock,
 } from "lucide-react";
-import { useAuth } from "../../src/context/AuthContext";
-import api from "../../src/services/api";
+import { useAuth } from "../../context/AuthContext";
+import api from "../../services/api";
 import Sidebar from "../../components/sidebar/Sidebar";
 import styles from "./patientDashboard.module.css";
 

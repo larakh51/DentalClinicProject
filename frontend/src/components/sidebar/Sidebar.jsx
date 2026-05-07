@@ -8,7 +8,7 @@ import {
   UserRound,
   LogOut,
 } from "lucide-react";
-import { useAuth } from "../../src/context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 import styles from "./sidebar.module.css";
 
 function Sidebar() {
