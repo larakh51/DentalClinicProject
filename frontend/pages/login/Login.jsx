@@ -44,7 +44,7 @@ function Login() {
         <div className={styles.logoCircle}>
           <FaTooth className={styles.toothIcon} />
         </div>
-        
+
         <h1 className={styles.title}>Dental Clinic System</h1>
         <p className={styles.subtitle}>Sign in to access your account</p>
 
