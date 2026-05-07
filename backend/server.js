@@ -1,7 +1,13 @@
+const path = require("path");
+
+require("dotenv").config({
+  path: path.join(__dirname, ".env"),
+  override: true,
+});
+
 const express = require("express");
 const cors = require("cors");
-const cookieParser = require("cookie-parser");
-require("dotenv").config();
+const session = require("express-session");
 
 const authRoutes = require("./routes/authRoutes");
 const usersRoutes = require("./routes/usersRoutes");
@@ -20,7 +26,21 @@ app.use(
 );
 
 app.use(express.json());
-app.use(cookieParser());
+
+app.use(
+  session({
+    name: "clinic_session",
+    secret: process.env.SESSION_SECRET || "clinic_default_secret",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      maxAge: 24 * 60 * 60 * 1000,
+    },
+  }),
+);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", usersRoutes);

@@ -1,26 +1,6 @@
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
 const pool = require("../database/db");
 const generateId = require("../utils/generateId");
-
-const createToken = (user) => {
-  return jwt.sign(
-    {
-      id: user.id,
-      role: user.role,
-      email: user.email,
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: "1d" },
-  );
-};
-
-const cookieOptions = {
-  httpOnly: true,
-  secure: false,
-  sameSite: "lax",
-  maxAge: 24 * 60 * 60 * 1000,
-};
 
 const login = async (req, res) => {
   try {
@@ -46,19 +26,17 @@ const login = async (req, res) => {
       });
     }
 
-    const token = createToken(user);
-
-    res.cookie("token", token, cookieOptions);
+    req.session.user = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      firstName: user.first_name,
+      lastName: user.last_name,
+    };
 
     res.json({
       message: "Login successful",
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        firstName: user.first_name,
-        lastName: user.last_name,
-      },
+      user: req.session.user,
     });
   } catch (error) {
     console.error("LOGIN ERROR:", error);
@@ -96,7 +74,7 @@ const registerPatient = async (req, res) => {
     const id = generateId("p");
 
     await pool.query(
-      `INSERT INTO users 
+      `INSERT INTO users
        (id, email, password, role, first_name, last_name, phone, birth_date, id_number)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -128,11 +106,17 @@ const registerPatient = async (req, res) => {
 
 const getMe = async (req, res) => {
   try {
+    if (!req.session.user) {
+      return res.status(401).json({
+        message: "Not authenticated",
+      });
+    }
+
     const [users] = await pool.query(
       `SELECT id, email, role, first_name, last_name, phone
        FROM users
        WHERE id = ?`,
-      [req.user.id],
+      [req.session.user.id],
     );
 
     if (users.length === 0) {
@@ -162,14 +146,18 @@ const getMe = async (req, res) => {
 };
 
 const logout = (req, res) => {
-  res.clearCookie("token", {
-    httpOnly: true,
-    secure: false,
-    sameSite: "lax",
-  });
+  req.session.destroy((error) => {
+    if (error) {
+      return res.status(500).json({
+        message: "Logout failed",
+      });
+    }
 
-  res.json({
-    message: "Logged out successfully",
+    res.clearCookie("clinic_session");
+
+    res.json({
+      message: "Logged out successfully",
+    });
   });
 };
 
