@@ -1,30 +1,13 @@
-const jwt = require("jsonwebtoken");
-
 const protect = (req, res, next) => {
-  try {
-    const token = req.cookies?.token;
-
-    if (!token) {
-      return res.status(401).json({
-        message: "Not authorized, no token",
-      });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    req.user = {
-      id: decoded.id,
-      email: decoded.email,
-      role: decoded.role,
-    };
-
-    next();
-  } catch (error) {
+  if (!req.session || !req.session.user) {
     return res.status(401).json({
-      message: "Not authorized, token failed",
-      error: error.message,
+      message: "Not authorized",
     });
   }
+
+  req.user = req.session.user;
+
+  next();
 };
 
 const allowRoles = (...roles) => {
