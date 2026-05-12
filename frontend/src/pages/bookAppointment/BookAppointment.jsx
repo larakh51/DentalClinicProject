@@ -23,6 +23,11 @@ function BookAppointment() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const isFormComplete =
+    form.treatmentType && form.doctorId && form.date && form.time;
+
+  const selectedDoctor = doctors.find((doctor) => doctor.id === form.doctorId);
+
   const treatmentTypes = [
     "Cleaning & Check-up",
     "Filling",
@@ -223,6 +228,27 @@ function BookAppointment() {
                   placeholder="Any special requirements or concerns..."
                 />
               </div>
+
+              {isFormComplete && (
+                <div className={styles.summaryBox}>
+                  <h3>Appointment Summary</h3>
+
+                  <p>
+                    <strong>Treatment:</strong> {form.treatmentType}
+                  </p>
+
+                  <p>
+                    <strong>Doctor:</strong> Dr. {selectedDoctor?.first_name}{" "}
+                    {selectedDoctor?.last_name}
+                  </p>
+
+                  <p>
+                    <strong>Date & Time:</strong>{" "}
+                    {new Date(form.date).toLocaleDateString("en-GB")} at{" "}
+                    {form.time}
+                  </p>
+                </div>
+              )}
 
               <div className={styles.actions}>
                 <button type="submit" className={styles.confirmBtn}>
