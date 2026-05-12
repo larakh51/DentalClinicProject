@@ -27,6 +27,7 @@ function BookAppointment() {
     form.treatmentType && form.doctorId && form.date && form.time;
 
   const selectedDoctor = doctors.find((doctor) => doctor.id === form.doctorId);
+  const today = new Date().toISOString().split("T")[0];
 
   const treatmentTypes = [
     "Cleaning & Check-up",
@@ -83,6 +84,23 @@ function BookAppointment() {
 
     if (!user?.id) {
       setError("You must be logged in to book an appointment");
+      return;
+    }
+
+    if (form.date < today) {
+      setError("You cannot book an appointment in the past");
+      return;
+    }
+
+    if (form.date === today) {
+      const now = new Date();
+      const currentTime = now.toLocaleTimeString().slice(0, 5);
+
+      if (form.time <= currentTime) {
+        setError("You cannot book an appointment in the past");
+        return;
+      }
+      setError("You cannot book an appointment today");
       return;
     }
 
@@ -198,6 +216,7 @@ function BookAppointment() {
                   name="date"
                   value={form.date}
                   onChange={handleChange}
+                  min={today}
                   required
                 />
               </div>
