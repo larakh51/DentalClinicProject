@@ -233,6 +233,32 @@
   font-weight: 600;
 }
 
+.summaryBox {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 9px;
+  padding: 16px;
+  margin: 18px 0;
+}
+
+.summaryBox h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e40af;
+}
+
+.summaryBox p {
+  margin: 7px 0;
+  font-size: 14px;
+  color: #1d4ed8;
+}
+
+.summaryBox strong {
+  font-weight: 700;
+  color: #1e3a8a;
+}
+
 @media (max-width: 1100px) {
   .main {
     margin-left: 0;

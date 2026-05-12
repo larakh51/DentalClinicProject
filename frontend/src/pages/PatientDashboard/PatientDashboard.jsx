@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import {
   Calendar,
@@ -20,6 +21,7 @@ function PatientDashboard() {
   const [appointments, setAppointments] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [treatments, setTreatments] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -142,48 +144,16 @@ function PatientDashboard() {
           </section>
 
           <section className={styles.card}>
-            <div className={styles.sectionHeader}>
-              <div>
-                <h2>Health Summary</h2>
-                <p>Quick medical info</p>
-              </div>
-            </div>
-
-            <div className={`${styles.healthBox} ${styles.redBox}`}>
-              <AlertCircle size={20} />
-              <div>
-                <h4>Allergies</h4>
-                <p>None reported</p>
-              </div>
-            </div>
-
-            <div className={`${styles.healthBox} ${styles.blueBox}`}>
-              <Heart size={20} />
-              <div>
-                <h4>Conditions</h4>
-                <p>None reported</p>
-              </div>
-            </div>
-
-            <div className={`${styles.healthBox} ${styles.greenBox}`}>
-              <Pill size={20} />
-              <div>
-                <h4>Medications</h4>
-                <p>None reported</p>
-              </div>
-            </div>
-
-            <button className={styles.outlineButton}>View Full Record</button>
-          </section>
-
-          <section className={styles.card}>
             <div className={styles.sectionHeaderRow}>
               <div>
                 <h2>Upcoming Appointments</h2>
                 <p>Your scheduled dental visits</p>
               </div>
 
-              <button className={styles.newButton}>
+              <button
+                className={styles.newButton}
+                onClick={() => navigate("/book-appointment")}
+              >
                 <Calendar size={16} />
                 Book New
               </button>
@@ -232,6 +202,41 @@ function PatientDashboard() {
                 ))
               )}
             </div>
+          </section>
+
+          <section className={styles.card}>
+            <div className={styles.sectionHeader}>
+              <div>
+                <h2>Health Summary</h2>
+                <p>Quick medical info</p>
+              </div>
+            </div>
+
+            <div className={`${styles.healthBox} ${styles.redBox}`}>
+              <AlertCircle size={20} />
+              <div>
+                <h4>Allergies</h4>
+                <p>None reported</p>
+              </div>
+            </div>
+
+            <div className={`${styles.healthBox} ${styles.blueBox}`}>
+              <Heart size={20} />
+              <div>
+                <h4>Conditions</h4>
+                <p>None reported</p>
+              </div>
+            </div>
+
+            <div className={`${styles.healthBox} ${styles.greenBox}`}>
+              <Pill size={20} />
+              <div>
+                <h4>Medications</h4>
+                <p>None reported</p>
+              </div>
+            </div>
+
+            <button className={styles.outlineButton}>View Full Record</button>
           </section>
 
           <section className={styles.card}>
