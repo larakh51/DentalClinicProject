@@ -11,6 +11,7 @@ import PatientDashboard from "./pages/patientDashboard/PatientDashboard";
 import BookAppointment from "./pages/bookAppointment/BookAppointment";
 import MyAppointments from "./pages/myAppointments/MyAppointments";
 import MedicalRecords from "./pages/medicalRecords/MedicalRecords";
+import Payments from "./pages/payments/Payments";
 
 function App() {
   return (
@@ -51,6 +52,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["patient"]}>
               <MedicalRecords />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/payments"
+          element={
+            <ProtectedRoute allowedRoles={["patient"]}>
+              <Payments />
             </ProtectedRoute>
           }
         />
