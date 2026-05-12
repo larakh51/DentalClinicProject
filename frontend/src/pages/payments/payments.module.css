@@ -1,0 +1,288 @@
+* {
+  box-sizing: border-box;
+}
+
+.page {
+  min-height: 100vh;
+  background: #f6f7f9;
+  display: flex;
+  font-family: Arial, sans-serif;
+  color: #111827;
+}
+
+.main {
+  flex: 1;
+  min-height: 100vh;
+  background: #f6f7f9;
+}
+
+.topBar {
+  height: 76px;
+  background: #ffffff;
+  border-bottom: 1px solid #e1e1e1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 28px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.userCircle {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background: #dbeafe;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.content {
+  padding: 30px 26px 42px;
+}
+
+.pageHeader {
+  margin-bottom: 26px;
+}
+
+.pageHeader h1 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 36px;
+  color: #111827;
+  font-weight: 700;
+}
+
+.pageHeader p {
+  margin: 6px 0 0;
+  color: #52617a;
+  font-size: 16px;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.statCard {
+  background: #ffffff;
+  border: 1px solid #dddddd;
+  border-radius: 14px;
+  padding: 24px;
+  min-height: 140px;
+}
+
+.statTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 34px;
+}
+
+.statTop h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.statCard strong {
+  display: block;
+  font-size: 26px;
+  font-weight: 400;
+  margin-bottom: 8px;
+}
+
+.statCard p {
+  margin: 0;
+  color: #52617a;
+  font-size: 14px;
+}
+
+.greenIcon,
+.greenAmount {
+  color: #00a854;
+}
+
+.orangeIcon,
+.orangeAmount {
+  color: #d98200;
+}
+
+.redIcon,
+.redAmount {
+  color: #ef4444;
+}
+
+.card,
+.methodsCard {
+  background: #ffffff;
+  border: 1px solid #dddddd;
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.cardHeader {
+  margin-bottom: 26px;
+}
+
+.cardHeader h2,
+.methodsCard h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.cardHeader p {
+  margin: 8px 0 0;
+  color: #717187;
+  font-size: 16px;
+}
+
+.table {
+  width: 100%;
+}
+
+.tableHead,
+.tableRow {
+  display: grid;
+  grid-template-columns: 1.1fr 1.2fr 2.5fr 1fr 1.1fr 0.7fr;
+  align-items: center;
+  column-gap: 18px;
+}
+
+.tableHead {
+  padding: 0 8px 14px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.tableRow {
+  min-height: 52px;
+  padding: 0 8px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 14px;
+  color: #111827;
+}
+
+.tableRow:last-child {
+  border-bottom: none;
+}
+
+.invoiceId {
+  font-weight: 700;
+}
+
+.status {
+  width: fit-content;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.paid {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.pending {
+  background: #fff7ed;
+  color: #d98200;
+}
+
+.overdue {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.downloadBtn {
+  width: 36px;
+  height: 32px;
+  border: 1px solid #dddddd;
+  background: #ffffff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #111827;
+}
+
+.downloadBtn:hover {
+  background: #f8fafc;
+}
+
+.methodsCard h2 {
+  margin-bottom: 30px;
+}
+
+.methods {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.methods div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #27405f;
+  font-size: 14px;
+}
+
+.empty {
+  padding: 28px 8px;
+  color: #64748b;
+  font-size: 15px;
+}
+
+.errorBox {
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: 9px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+@media (max-width: 950px) {
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .tableHead {
+    display: none;
+  }
+
+  .tableRow {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 14px 8px;
+  }
+}
+
+@media (max-width: 650px) {
+  .content {
+    padding: 24px 16px;
+  }
+
+  .methods {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
