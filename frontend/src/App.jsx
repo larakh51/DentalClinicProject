@@ -10,6 +10,7 @@ import Register from "./pages/register/Register";
 import PatientDashboard from "./pages/patientDashboard/PatientDashboard";
 import BookAppointment from "./pages/bookAppointment/BookAppointment";
 import MyAppointments from "./pages/myAppointments/MyAppointments";
+import MedicalRecords from "./pages/medicalRecords/MedicalRecords";
 
 function App() {
   return (
@@ -42,6 +43,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["patient"]}>
               <MyAppointments />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/medical-records"
+          element={
+            <ProtectedRoute allowedRoles={["patient"]}>
+              <MedicalRecords />
             </ProtectedRoute>
           }
         />
