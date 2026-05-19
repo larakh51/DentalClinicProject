@@ -1,0 +1,342 @@
+* {
+  box-sizing: border-box;
+}
+
+.page {
+  min-height: 100vh;
+  background: #f6f7f9;
+  display: flex;
+  font-family: Arial, sans-serif;
+  color: #111827;
+}
+
+.main {
+  flex: 1;
+  min-height: 100vh;
+  background: #f6f7f9;
+}
+
+.topBar {
+  height: 76px;
+  background: #ffffff;
+  border-bottom: 1px solid #e1e1e1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 28px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.userCircle {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background: #dbeafe;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.content {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 34px 0 42px;
+}
+
+.pageHeader {
+  margin-bottom: 26px;
+}
+
+.pageHeader h1 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 36px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.pageHeader p {
+  margin: 6px 0 0;
+  color: #52617a;
+  font-size: 16px;
+}
+
+.profileCard,
+.card,
+.dangerCard {
+  background: #ffffff;
+  border: 1px solid #dddddd;
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.profileCard {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.bigAvatar {
+  width: 95px;
+  height: 95px;
+  border-radius: 50%;
+  background: #dbeafe;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.profileCard h2 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.profileCard p {
+  margin: 8px 0 18px;
+  color: #52617a;
+  font-size: 16px;
+}
+
+.avatarBtn,
+.outlineBtn,
+.cancelBtn {
+  height: 36px;
+  border: 1px solid #dddddd;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cardHeaderRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.cardHeaderRow h2,
+.securityHeader h2,
+.dangerCard h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.cardHeaderRow p,
+.securityHeader p,
+.dangerCard p {
+  margin: 6px 0 0;
+  color: #717187;
+  font-size: 16px;
+}
+
+.darkBtn,
+.saveBtn {
+  height: 38px;
+  border: none;
+  border-radius: 8px;
+  background: #030217;
+  color: #ffffff;
+  padding: 0 18px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.darkBtn:hover,
+.saveBtn:hover {
+  background: #090827;
+}
+
+.editActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.field {
+  margin-bottom: 18px;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 8px;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.inputBox {
+  height: 38px;
+  border-radius: 9px;
+  background: #f0f0f2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 13px;
+  color: #94a3b8;
+}
+
+.inputBox input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #111827;
+  font-size: 14px;
+  font-family: Arial, sans-serif;
+}
+
+.inputBox input:disabled {
+  color: #7a8699;
+  cursor: not-allowed;
+}
+
+.securityHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.securityItem {
+  min-height: 76px;
+  border: 1px solid #dddddd;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.securityItem:last-child {
+  margin-bottom: 0;
+}
+
+.securityItem h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.securityItem p {
+  margin: 6px 0 0;
+  color: #52617a;
+  font-size: 14px;
+}
+
+.dangerCard {
+  border-color: #ffb5b5;
+}
+
+.dangerCard h2 {
+  color: #ef4444;
+}
+
+.dangerBox {
+  margin-top: 24px;
+  background: #fff1f1;
+  border: 1px solid #ffb5b5;
+  border-radius: 10px;
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dangerBox h3 {
+  margin: 0;
+  color: #991b1b;
+  font-size: 16px;
+}
+
+.dangerBox p {
+  margin: 6px 0 0;
+  color: #dc2626;
+  font-size: 14px;
+}
+
+.deleteBtn {
+  height: 36px;
+  border: 1px solid #ff8a8a;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #ef4444;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.deleteBtn:hover {
+  background: #fee2e2;
+}
+
+.errorBox {
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: 9px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.successBox {
+  background: #dcfce7;
+  color: #166534;
+  border-radius: 9px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+@media (max-width: 800px) {
+  .content {
+    max-width: 92%;
+  }
+
+  .profileCard {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .securityItem,
+  .dangerBox {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+}
