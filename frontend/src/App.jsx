@@ -13,6 +13,7 @@ import MyAppointments from "./pages/myAppointments/MyAppointments";
 import MedicalRecords from "./pages/medicalRecords/MedicalRecords";
 import Payments from "./pages/payments/Payments";
 import Profile from "./pages/profile/Profile";
+import ManagerDashboard from "./pages/managerDashboard/ManagerDashboard";
 import DoctorDashboard from "./pages/doctorDashboard/DoctorDashboard";
 function App() {
   return (
@@ -70,6 +71,15 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["patient"]}>
               <Profile />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/manager-dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <ManagerDashboard />
             </ProtectedRoute>
           }
         />
