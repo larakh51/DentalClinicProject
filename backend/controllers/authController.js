@@ -32,11 +32,20 @@ const login = async (req, res) => {
       role: user.role,
       firstName: user.first_name,
       lastName: user.last_name,
+      phone: user.phone,
     };
 
-    res.json({
-      message: "Login successful",
-      user: req.session.user,
+    req.session.save((error) => {
+      if (error) {
+        return res.status(500).json({
+          message: "Failed to save session",
+        });
+      }
+
+      res.json({
+        message: "Login successful",
+        user: req.session.user,
+      });
     });
   } catch (error) {
     console.error("LOGIN ERROR:", error);
@@ -75,8 +84,8 @@ const registerPatient = async (req, res) => {
 
     await pool.query(
       `INSERT INTO users
-       (id, email, password, role, first_name, last_name, phone, birth_date, id_number)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, email, password, role, first_name, last_name, phone, birth_date, id_number, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         email,
@@ -87,6 +96,7 @@ const registerPatient = async (req, res) => {
         phone || null,
         birthDate || null,
         idNumber,
+        "active",
       ],
     );
 
@@ -106,7 +116,7 @@ const registerPatient = async (req, res) => {
 
 const getMe = async (req, res) => {
   try {
-    if (!req.session.user) {
+    if (!req.session || !req.session.user) {
       return res.status(401).json({
         message: "Not authenticated",
       });
@@ -127,15 +137,19 @@ const getMe = async (req, res) => {
 
     const user = users[0];
 
+    const currentUser = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      phone: user.phone,
+    };
+
+    req.session.user = currentUser;
+
     res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        phone: user.phone,
-      },
+      user: currentUser,
     });
   } catch (error) {
     res.status(500).json({
