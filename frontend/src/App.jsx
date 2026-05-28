@@ -15,6 +15,8 @@ import Payments from "./pages/payments/Payments";
 import Profile from "./pages/profile/Profile";
 import ManagerDashboard from "./pages/managerDashboard/ManagerDashboard";
 import DoctorDashboard from "./pages/doctorDashboard/DoctorDashboard";
+import DoctorSchedule from "./pages/doctorSchedule/DoctorSchedule";
+import DoctorPatients from "./pages/doctorPatients/DoctorPatients";
 import ManagerAppointments from "./pages/managerAppointments/ManagerAppointments";
 import ManagerPatients from "./pages/managerPatients/ManagerPatients";
 
@@ -92,6 +94,24 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["doctor"]}>
               <DoctorDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/doctor-schedule"
+          element={
+            <ProtectedRoute allowedRoles={["doctor"]}>
+              <DoctorSchedule />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/doctor-patients"
+          element={
+            <ProtectedRoute allowedRoles={["doctor"]}>
+              <DoctorPatients />
             </ProtectedRoute>
           }
         />
