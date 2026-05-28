@@ -35,6 +35,60 @@ const getDoctors = async (req, res) => {
   }
 };
 
+const getPatientsForDoctor = async (req, res) => {
+  try {
+    const { doctorId } = req.query;
+
+    let sql = `
+      SELECT 
+        u.id,
+        u.email,
+        u.first_name,
+        u.last_name,
+        u.phone,
+        u.birth_date,
+        u.id_number,
+        u.avatar,
+        COUNT(a.id) AS appointments_count
+      FROM users u
+      LEFT JOIN appointments a
+        ON a.patient_id = u.id
+      WHERE u.role = 'patient'
+    `;
+
+    const params = [];
+
+    if (doctorId) {
+      sql += " AND a.doctor_id = ?";
+      params.push(doctorId);
+    }
+
+    sql += `
+      GROUP BY 
+        u.id,
+        u.email,
+        u.first_name,
+        u.last_name,
+        u.phone,
+        u.birth_date,
+        u.id_number,
+        u.avatar
+      ORDER BY u.first_name, u.last_name
+    `;
+
+    const [patients] = await pool.query(sql, params);
+
+    res.json(patients);
+  } catch (error) {
+    console.error("GET PATIENTS ERROR:", error);
+
+    res.status(500).json({
+      message: "Failed to get patients",
+      error: error.sqlMessage || error.message,
+    });
+  }
+};
+
 const getUserById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -104,6 +158,7 @@ const deleteUser = async (req, res) => {
 module.exports = {
   getUsers,
   getDoctors,
+  getPatientsForDoctor,
   getUserById,
   updateUser,
   deleteUser,
