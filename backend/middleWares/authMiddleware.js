@@ -6,7 +6,6 @@ const protect = (req, res, next) => {
   }
 
   req.user = req.session.user;
-
   next();
 };
 

@@ -1,0 +1,298 @@
+* {
+  box-sizing: border-box;
+}
+
+.page {
+  min-height: 100vh;
+  background: #f6f7f9;
+  display: flex;
+  font-family: Arial, sans-serif;
+  color: #111827;
+}
+
+.main {
+  flex: 1;
+  min-height: 100vh;
+  background: #f6f7f9;
+}
+
+.topBar {
+  height: 76px;
+  background: #ffffff;
+  border-bottom: 1px solid #e1e1e1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 28px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.userCircle {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background: #dbeafe;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.content {
+  padding: 30px 26px 42px;
+}
+
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 26px;
+}
+
+.headerRow h1 {
+  margin: 0;
+  font-size: 31px;
+  line-height: 38px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.headerRow p {
+  margin: 6px 0 0;
+  color: #52617a;
+  font-size: 16px;
+}
+
+.addBtn {
+  height: 40px;
+  border: none;
+  border-radius: 8px;
+  background: #030217;
+  color: #ffffff;
+  padding: 0 18px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.addBtn:hover {
+  background: #090827;
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid #dddddd;
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.cardHeader {
+  margin-bottom: 28px;
+}
+
+.cardHeader h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.cardHeader p {
+  margin: 8px 0 0;
+  color: #717187;
+  font-size: 16px;
+}
+
+.doctorsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.employeeCard {
+  border: 1px solid #dddddd;
+  border-radius: 10px;
+  padding: 16px;
+  min-height: 178px;
+}
+
+.employeeTop {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #dbeafe;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.managerAvatar {
+  background: #f3e8ff;
+  color: #9333ea;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nameRow h3,
+.adminItem h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.employeeTop p,
+.adminItem p {
+  margin: 7px 0 0;
+  color: #52617a;
+  font-size: 14px;
+}
+
+.activeBadge {
+  background: #dcfce7;
+  color: #15803d;
+  border-radius: 8px;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.contactInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.contactInfo div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #52617a;
+  font-size: 14px;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 130px;
+  gap: 14px;
+}
+
+.editBtn,
+.scheduleBtn,
+.smallEditBtn {
+  height: 36px;
+  border: 1px solid #dddddd;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.editBtn:hover,
+.scheduleBtn:hover,
+.smallEditBtn:hover {
+  background: #f8fafc;
+}
+
+.adminList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.adminItem {
+  border: 1px solid #dddddd;
+  border-radius: 10px;
+  min-height: 72px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.adminLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.smallEditBtn {
+  width: 58px;
+}
+
+.emptyBox {
+  padding: 28px 8px;
+  color: #64748b;
+  font-size: 15px;
+}
+
+.errorBox {
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: 9px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+@media (max-width: 950px) {
+  .doctorsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 650px) {
+  .content {
+    padding: 24px 16px;
+  }
+
+  .headerRow {
+    flex-direction: column;
+  }
+
+  .addBtn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .actions {
+    grid-template-columns: 1fr;
+  }
+
+  .adminItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+}

@@ -1,9 +1,11 @@
 const pool = require("../database/db");
+const bcrypt = require("bcrypt");
+const generateId = require("../utils/generateId");
 
 const getUsers = async (req, res) => {
   try {
     const [users] = await pool.query(
-      `SELECT id, email, role, first_name, last_name, phone, birth_date, id_number, avatar
+      `SELECT id, email, role, first_name, last_name, phone, birth_date, id_number, avatar, status
        FROM users
        ORDER BY first_name`,
     );
@@ -20,7 +22,7 @@ const getUsers = async (req, res) => {
 const getDoctors = async (req, res) => {
   try {
     const [doctors] = await pool.query(
-      `SELECT id, first_name, last_name, email, phone, avatar
+      `SELECT id, first_name, last_name, email, phone, avatar, status
        FROM users
        WHERE role = 'doctor'
        ORDER BY first_name`,
@@ -49,10 +51,16 @@ const getPatientsForDoctor = async (req, res) => {
         u.birth_date,
         u.id_number,
         u.avatar,
-        COUNT(a.id) AS appointments_count
+        COUNT(a.id) AS appointments_count,
+        CASE
+          WHEN mr.allergies IS NOT NULL AND mr.allergies != '' THEN 1
+          ELSE 0
+        END AS has_allergies
       FROM users u
       LEFT JOIN appointments a
         ON a.patient_id = u.id
+      LEFT JOIN medical_records mr
+        ON mr.patient_id = u.id
       WHERE u.role = 'patient'
     `;
 
@@ -72,7 +80,8 @@ const getPatientsForDoctor = async (req, res) => {
         u.phone,
         u.birth_date,
         u.id_number,
-        u.avatar
+        u.avatar,
+        mr.allergies
       ORDER BY u.first_name, u.last_name
     `;
 
@@ -89,12 +98,102 @@ const getPatientsForDoctor = async (req, res) => {
   }
 };
 
+const createEmployee = async (req, res) => {
+  try {
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      password,
+      role,
+      idNumber,
+      birthDate,
+    } = req.body;
+
+    const normalizedRole = role?.toLowerCase();
+
+    if (!firstName || !lastName || !email || !password || !normalizedRole) {
+      return res.status(400).json({
+        message: "Missing required fields",
+      });
+    }
+
+    if (!["doctor", "manager"].includes(normalizedRole)) {
+      return res.status(400).json({
+        message: "Role must be doctor or manager",
+      });
+    }
+
+    let existsSql = "SELECT id FROM users WHERE email = ?";
+    const existsParams = [email];
+
+    if (idNumber) {
+      existsSql += " OR id_number = ?";
+      existsParams.push(idNumber);
+    }
+
+    const [exists] = await pool.query(existsSql, existsParams);
+
+    if (exists.length > 0) {
+      return res.status(409).json({
+        message: "User already exists",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    let id;
+    let idExists = true;
+
+    while (idExists) {
+      id = normalizedRole === "doctor" ? generateId("d") : generateId("m");
+
+      const [sameId] = await pool.query("SELECT id FROM users WHERE id = ?", [
+        id,
+      ]);
+
+      idExists = sameId.length > 0;
+    }
+
+    await pool.query(
+      `INSERT INTO users
+       (id, email, password, role, first_name, last_name, phone, birth_date, id_number, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        email,
+        hashedPassword,
+        normalizedRole,
+        firstName,
+        lastName,
+        phone || null,
+        birthDate || null,
+        idNumber || null,
+        "active",
+      ],
+    );
+
+    res.status(201).json({
+      message: "Employee created successfully",
+      id,
+    });
+  } catch (error) {
+    console.error("CREATE EMPLOYEE ERROR:", error);
+
+    res.status(500).json({
+      message: "Failed to create employee",
+      error: error.sqlMessage || error.message,
+    });
+  }
+};
+
 const getUserById = async (req, res) => {
   try {
     const { id } = req.params;
 
     const [users] = await pool.query(
-      `SELECT id, email, role, first_name, last_name, phone, birth_date, id_number, avatar
+      `SELECT id, email, role, first_name, last_name, phone, birth_date, id_number, avatar, status
        FROM users
        WHERE id = ?`,
       [id],
@@ -118,13 +217,13 @@ const getUserById = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { firstName, lastName, phone, email } = req.body;
+    const { firstName, lastName, phone, email, status } = req.body;
 
     await pool.query(
       `UPDATE users
-       SET first_name = ?, last_name = ?, phone = ?, email = ?
+       SET first_name = ?, last_name = ?, phone = ?, email = ?, status = ?
        WHERE id = ?`,
-      [firstName, lastName, phone, email, id],
+      [firstName, lastName, phone, email, status || "active", id],
     );
 
     res.json({
@@ -142,7 +241,7 @@ const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
 
-    await pool.query("DELETE FROM users WHERE id = ?", [id]);
+    await pool.query("UPDATE users SET status = 'inactive' WHERE id = ?", [id]);
 
     res.json({
       message: "User deleted successfully",
@@ -159,6 +258,7 @@ module.exports = {
   getUsers,
   getDoctors,
   getPatientsForDoctor,
+  createEmployee,
   getUserById,
   updateUser,
   deleteUser,

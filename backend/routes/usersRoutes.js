@@ -5,6 +5,7 @@ const {
   getUsers,
   getDoctors,
   getPatientsForDoctor,
+  createEmployee,
   getUserById,
   updateUser,
   deleteUser,
@@ -15,6 +16,8 @@ const { protect, allowRoles } = require("../middleWares/authMiddleware");
 router.get("/", protect, allowRoles("manager"), getUsers);
 router.get("/doctors", getDoctors);
 router.get("/patients", getPatientsForDoctor);
+router.post("/employees", protect, allowRoles("manager"), createEmployee);
+
 router.get("/:id", protect, getUserById);
 router.put("/:id", protect, updateUser);
 router.delete("/:id", protect, allowRoles("manager"), deleteUser);
