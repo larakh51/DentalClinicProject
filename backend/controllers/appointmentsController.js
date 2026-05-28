@@ -4,33 +4,62 @@ const getAppointments = async (req, res) => {
   try {
     const { doctorId, patientId, date } = req.query;
 
-    let sql = "SELECT * FROM appointments WHERE 1=1";
+    let sql = `
+      SELECT
+        a.id,
+        a.patient_id,
+        a.doctor_id,
+        a.date,
+        a.time,
+        a.treatment_type,
+        a.status,
+        a.notes,
+
+        COALESCE(
+          a.patient_name,
+          CONCAT(patient.first_name, ' ', patient.last_name)
+        ) AS patient_name,
+
+        COALESCE(
+          a.doctor_name,
+          CONCAT('Dr. ', doctor.first_name, ' ', doctor.last_name)
+        ) AS doctor_name
+
+      FROM appointments a
+      LEFT JOIN users patient ON a.patient_id = patient.id
+      LEFT JOIN users doctor ON a.doctor_id = doctor.id
+      WHERE 1=1
+    `;
+
     const params = [];
 
     if (doctorId) {
-      sql += " AND doctor_id = ?";
+      sql += " AND a.doctor_id = ?";
       params.push(doctorId);
     }
 
     if (patientId) {
-      sql += " AND patient_id = ?";
+      sql += " AND a.patient_id = ?";
       params.push(patientId);
     }
 
     if (date) {
-      sql += " AND date = ?";
+      sql += " AND a.date = ?";
       params.push(date);
     }
 
-    sql += " ORDER BY date, time";
+    sql += " ORDER BY a.date DESC, a.time DESC";
 
     const [appointments] = await pool.query(sql, params);
 
     res.json(appointments);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to get appointments", error: error.message });
+    console.error("GET APPOINTMENTS ERROR:", error);
+
+    res.status(500).json({
+      message: "Failed to get appointments",
+      error: error.sqlMessage || error.message,
+    });
   }
 };
 
