@@ -17,6 +17,9 @@ import ManagerDashboard from "./pages/managerDashboard/ManagerDashboard";
 import DoctorDashboard from "./pages/doctorDashboard/DoctorDashboard";
 import DoctorSchedule from "./pages/doctorSchedule/DoctorSchedule";
 import DoctorPatients from "./pages/doctorPatients/DoctorPatients";
+import ManagerAppointments from "./pages/managerAppointments/ManagerAppointments";
+import ManagerPatients from "./pages/managerPatients/ManagerPatients";
+
 function App() {
   return (
     <>
@@ -109,6 +112,22 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["doctor"]}>
               <DoctorPatients />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager-appointments"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <ManagerAppointments />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager-patients"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <ManagerPatients />
             </ProtectedRoute>
           }
         />

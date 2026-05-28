@@ -1,0 +1,273 @@
+* {
+  box-sizing: border-box;
+}
+
+.page {
+  min-height: 100vh;
+  background: #f6f7f9;
+  display: flex;
+  font-family: Arial, sans-serif;
+  color: #111827;
+}
+
+.main {
+  flex: 1;
+  min-height: 100vh;
+  background: #f6f7f9;
+}
+
+.topBar {
+  height: 76px;
+  background: #ffffff;
+  border-bottom: 1px solid #e1e1e1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 28px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.userCircle {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background: #dbeafe;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.content {
+  padding: 30px 26px 42px;
+}
+
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 26px;
+}
+
+.headerRow h1 {
+  margin: 0;
+  font-size: 31px;
+  line-height: 38px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.headerRow p {
+  margin: 6px 0 0;
+  color: #52617a;
+  font-size: 16px;
+}
+
+.newBtn {
+  height: 40px;
+  border: none;
+  border-radius: 8px;
+  background: #030217;
+  color: #ffffff;
+  padding: 0 18px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.newBtn:hover {
+  background: #090827;
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid #dddddd;
+  border-radius: 14px;
+  padding: 24px;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 34px;
+}
+
+.cardHeader h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.cardHeader p {
+  margin: 6px 0 0;
+  color: #717187;
+  font-size: 16px;
+}
+
+.filterBtn {
+  height: 36px;
+  border: 1px solid #dddddd;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filterBtn:hover {
+  background: #f8fafc;
+}
+
+.table {
+  width: 100%;
+}
+
+.tableHead,
+.tableRow {
+  display: grid;
+  grid-template-columns: 1.2fr 1.6fr 1.6fr 2fr 1.2fr 0.8fr;
+  align-items: center;
+  column-gap: 18px;
+}
+
+.tableHead {
+  padding: 0 8px 14px;
+  border-bottom: 1px solid #e5e7eb;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.tableRow {
+  min-height: 58px;
+  padding: 0 8px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 14px;
+  color: #111827;
+}
+
+.tableRow:last-child {
+  border-bottom: none;
+}
+
+.dateText {
+  display: block;
+  font-size: 14px;
+  font-weight: 400;
+  color: #111827;
+}
+
+.timeText {
+  margin: 4px 0 0;
+  color: #52617a;
+  font-size: 14px;
+}
+
+.patientName {
+  font-weight: 700;
+}
+
+.status {
+  width: fit-content;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: lowercase;
+}
+
+.confirmed {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.scheduled {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.completed {
+  background: #edf2f7;
+  color: #334155;
+}
+
+.cancelled {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.editBtn {
+  border: none;
+  background: transparent;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.editBtn:hover {
+  color: #2563eb;
+}
+
+@media (max-width: 1000px) {
+  .tableHead {
+    display: none;
+  }
+
+  .tableRow {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 14px 8px;
+  }
+}
+
+@media (max-width: 650px) {
+  .content {
+    padding: 24px 16px;
+  }
+
+  .headerRow {
+    flex-direction: column;
+  }
+
+  .newBtn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .cardHeader {
+    flex-direction: column;
+    gap: 14px;
+  }
+  .emptyBox {
+    padding: 28px 8px;
+    color: #64748b;
+    font-size: 15px;
+  }
+
+  .errorBox {
+    background: #fee2e2;
+    color: #991b1b;
+    border-radius: 9px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+}
