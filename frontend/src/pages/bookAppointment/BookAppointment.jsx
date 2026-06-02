@@ -7,78 +7,261 @@ import api from "../../services/api";
 import Sidebar from "../../components/sidebar/Sidebar";
 import styles from "./bookAppointment.module.css";
 
+const TIME_SLOTS = [
+  "09:00",
+  "09:30",
+  "10:00",
+  "10:30",
+  "11:00",
+  "11:30",
+  "12:00",
+  "13:00",
+  "13:30",
+  "14:00",
+  "14:30",
+  "15:00",
+  "16:00",
+  "17:00",
+  "18:00",
+  "19:00",
+];
+
 function BookAppointment() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
   const [doctors, setDoctors] = useState([]);
+  const [treatmentTypes, setTreatmentTypes] = useState([]);
+  const [bookedAppointments, setBookedAppointments] = useState([]);
+
   const [form, setForm] = useState({
-    treatmentType: "",
+    treatmentTypeId: "",
     doctorId: "",
     date: "",
     time: "",
     notes: "",
   });
 
+  const [loadingData, setLoadingData] = useState(true);
+  const [loadingSlots, setLoadingSlots] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const isFormComplete =
-    form.treatmentType && form.doctorId && form.date && form.time;
-
-  const selectedDoctor = doctors.find((doctor) => doctor.id === form.doctorId);
   const today = new Date().toISOString().split("T")[0];
 
-  const treatmentTypes = [
-    "Cleaning & Check-up",
-    "Filling",
-    "Root Canal",
-    "Tooth Extraction",
-    "Whitening",
-    "Consultation",
-  ];
+  const selectedDoctor = doctors.find((doctor) => doctor.id === form.doctorId);
 
-  const timeSlots = [
-    "09:00",
-    "09:30",
-    "10:00",
-    "10:30",
-    "11:00",
-    "11:30",
-    "12:00",
-    "13:00",
-    "13:30",
-    "14:00",
-    "14:30",
-    "15:00",
-    "16:00",
-    "17:00",
-    "18:00",
-    "19:00",
-  ];
+  const selectedTreatment = treatmentTypes.find(
+    (treatment) => treatment.id === form.treatmentTypeId,
+  );
+
+  const isFormComplete =
+    form.treatmentTypeId && form.doctorId && form.date && form.time;
+
+  const timeToMinutes = (time) => {
+    if (!time) return 0;
+
+    const cleanTime = String(time).slice(0, 5);
+    const [hours, minutes] = cleanTime.split(":").map(Number);
+
+    return hours * 60 + minutes;
+  };
+
+  const minutesToTime = (totalMinutes) => {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
+      2,
+      "0",
+    )}`;
+  };
+
+  const isPastSlot = (slot) => {
+    if (!form.date) return false;
+
+    if (form.date < today) return true;
+
+    if (form.date === today) {
+      const now = new Date();
+
+      const currentTime = now.toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+
+      return slot <= currentTime;
+    }
+
+    return false;
+  };
+
+  const getSlotConflict = (slot) => {
+    if (!selectedTreatment) return null;
+
+    const newStart = timeToMinutes(slot);
+    const duration = Number(selectedTreatment.duration_minutes || 30);
+    const newEnd = newStart + duration;
+
+    return bookedAppointments.find((appointment) => {
+      if (String(appointment.status).toLowerCase() === "cancelled") {
+        return false;
+      }
+
+      const existingStart = timeToMinutes(appointment.time);
+
+      const existingEnd = appointment.end_time
+        ? timeToMinutes(appointment.end_time)
+        : existingStart + Number(appointment.duration_minutes || 30);
+
+      return existingStart < newEnd && existingEnd > newStart;
+    });
+  };
+
+  const isSlotBooked = (slot) => {
+    return Boolean(getSlotConflict(slot));
+  };
+
+  const isSlotDisabled = (slot) => {
+    return isPastSlot(slot) || isSlotBooked(slot);
+  };
+
+  const getSlotLabel = (slot) => {
+    if (isPastSlot(slot)) {
+      return `${slot} - Past`;
+    }
+
+    const conflict = getSlotConflict(slot);
+
+    if (conflict) {
+      const start = String(conflict.time).slice(0, 5);
+
+      const end = conflict.end_time
+        ? String(conflict.end_time).slice(0, 5)
+        : minutesToTime(
+            timeToMinutes(conflict.time) +
+              Number(conflict.duration_minutes || 30),
+          );
+
+      return `${slot} - Booked (${start}-${end})`;
+    }
+
+    return slot;
+  };
+
+  const availableTimeSlots = TIME_SLOTS.map((slot) => ({
+    time: slot,
+    disabled: isSlotDisabled(slot),
+    label: getSlotLabel(slot),
+  }));
 
   useEffect(() => {
-    const loadDoctors = async () => {
+    const loadData = async () => {
+      setLoadingData(true);
+      setError("");
+
       try {
-        const res = await api.get("/users/doctors");
-        setDoctors(res.data || []);
-      } catch (error) {
-        console.log("Failed to load doctors", error);
+        const [doctorsRes, treatmentTypesRes] = await Promise.all([
+          api.get("/users/doctors"),
+          api.get("/settings/treatment-types"),
+        ]);
+
+        setDoctors(Array.isArray(doctorsRes.data) ? doctorsRes.data : []);
+        setTreatmentTypes(
+          Array.isArray(treatmentTypesRes.data) ? treatmentTypesRes.data : [],
+        );
+      } catch (err) {
+        console.log("Failed to load booking data", err.response?.data || err);
+
+        setError(
+          err.response?.data?.error ||
+            err.response?.data?.message ||
+            "Failed to load booking data",
+        );
+
+        setDoctors([]);
+        setTreatmentTypes([]);
+      } finally {
+        setLoadingData(false);
       }
     };
 
-    loadDoctors();
+    loadData();
   }, []);
 
+  useEffect(() => {
+    const loadBookedAppointments = async () => {
+      if (!form.doctorId || !form.date) {
+        setBookedAppointments([]);
+        return;
+      }
+
+      setLoadingSlots(true);
+
+      try {
+        const params = new URLSearchParams({
+          doctorId: form.doctorId,
+          date: form.date,
+        });
+
+        const res = await api.get(`/appointments?${params.toString()}`);
+
+        setBookedAppointments(Array.isArray(res.data) ? res.data : []);
+      } catch (err) {
+        console.log(
+          "Failed to load booked appointments",
+          err.response?.data || err,
+        );
+
+        setBookedAppointments([]);
+      } finally {
+        setLoadingSlots(false);
+      }
+    };
+
+    loadBookedAppointments();
+  }, [form.doctorId, form.date]);
+
+  useEffect(() => {
+    if (!form.time) return;
+
+    if (isSlotDisabled(form.time)) {
+      setForm((prev) => ({
+        ...prev,
+        time: "",
+      }));
+    }
+  }, [bookedAppointments, form.treatmentTypeId, form.date]);
+
   const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
+    const { name, value } = e.target;
+
+    setForm((prev) => {
+      const nextForm = {
+        ...prev,
+        [name]: value,
+      };
+
+      if (["treatmentTypeId", "doctorId", "date"].includes(name)) {
+        nextForm.time = "";
+      }
+
+      return nextForm;
     });
+  };
+
+  const formatPrice = (price) => {
+    const numericPrice = Number(price || 0);
+
+    if (numericPrice <= 0) return "";
+
+    return ` - ₪${numericPrice}`;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     setError("");
     setSuccess("");
 
@@ -87,29 +270,23 @@ function BookAppointment() {
       return;
     }
 
-    if (form.date < today) {
-      setError("You cannot book an appointment in the past");
+    if (!selectedTreatment) {
+      setError("Please select a treatment type");
       return;
     }
-
-    if (form.date === today) {
-      const now = new Date();
-      const currentTime = now.toLocaleTimeString().slice(0, 5);
-
-      if (form.time <= currentTime) {
-        setError("You cannot book an appointment in the past");
-        return;
-      }
-      setError("You cannot book an appointment today");
-      return;
-    }
-
-    const selectedDoctor = doctors.find(
-      (doctor) => doctor.id === form.doctorId,
-    );
 
     if (!selectedDoctor) {
       setError("Please select a doctor");
+      return;
+    }
+
+    if (!form.date || !form.time) {
+      setError("Please select date and time");
+      return;
+    }
+
+    if (isSlotDisabled(form.time)) {
+      setError("This time slot is not available");
       return;
     }
 
@@ -121,24 +298,28 @@ function BookAppointment() {
         doctorName: `Dr. ${selectedDoctor.first_name} ${selectedDoctor.last_name}`,
         date: form.date,
         time: form.time,
-        treatmentType: form.treatmentType,
+        treatmentTypeId: form.treatmentTypeId,
         notes: form.notes,
       });
 
       setSuccess("Appointment booked successfully");
 
       setForm({
-        treatmentType: "",
+        treatmentTypeId: "",
         doctorId: "",
         date: "",
         time: "",
         notes: "",
       });
 
+      setBookedAppointments([]);
+
       setTimeout(() => {
         navigate("/my-appointments");
       }, 1000);
     } catch (err) {
+      console.log("BOOK APPOINTMENT ERROR:", err.response?.data || err);
+
       setError(
         err.response?.data?.message ||
           err.response?.data?.error ||
@@ -174,19 +355,38 @@ function BookAppointment() {
             {error && <div className={styles.errorBox}>{error}</div>}
             {success && <div className={styles.successBox}>{success}</div>}
 
+            {loadingData && (
+              <div className={styles.successBox}>Loading booking data...</div>
+            )}
+
+            {!loadingData && treatmentTypes.length === 0 && (
+              <div className={styles.errorBox}>
+                No treatment types found. Please add treatments from Manager
+                Settings first.
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className={styles.form}>
               <div className={styles.field}>
                 <label>Treatment Type *</label>
+
                 <select
-                  name="treatmentType"
-                  value={form.treatmentType}
+                  name="treatmentTypeId"
+                  value={form.treatmentTypeId}
                   onChange={handleChange}
                   required
+                  disabled={loadingData || treatmentTypes.length === 0}
                 >
-                  <option value="">Select treatment type</option>
-                  {treatmentTypes.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
+                  <option value="">
+                    {loadingData
+                      ? "Loading treatment types..."
+                      : "Select treatment type"}
+                  </option>
+
+                  {treatmentTypes.map((treatment) => (
+                    <option key={treatment.id} value={treatment.id}>
+                      {treatment.name} - {treatment.duration_minutes} min
+                      {formatPrice(treatment.price)}
                     </option>
                   ))}
                 </select>
@@ -194,13 +394,16 @@ function BookAppointment() {
 
               <div className={styles.field}>
                 <label>Select Doctor *</label>
+
                 <select
                   name="doctorId"
                   value={form.doctorId}
                   onChange={handleChange}
                   required
+                  disabled={loadingData}
                 >
                   <option value="">Choose your preferred doctor</option>
+
                   {doctors.map((doctor) => (
                     <option key={doctor.id} value={doctor.id}>
                       Dr. {doctor.first_name} {doctor.last_name}
@@ -211,6 +414,7 @@ function BookAppointment() {
 
               <div className={styles.field}>
                 <label>Select Date *</label>
+
                 <input
                   type="date"
                   name="date"
@@ -223,16 +427,33 @@ function BookAppointment() {
 
               <div className={styles.field}>
                 <label>Select Time *</label>
+
                 <select
                   name="time"
                   value={form.time}
                   onChange={handleChange}
                   required
+                  disabled={
+                    loadingData ||
+                    loadingSlots ||
+                    !form.doctorId ||
+                    !form.date ||
+                    !form.treatmentTypeId
+                  }
                 >
-                  <option value="">Choose time slot</option>
-                  {timeSlots.map((time) => (
-                    <option key={time} value={time}>
-                      {time}
+                  <option value="">
+                    {loadingSlots
+                      ? "Loading available times..."
+                      : "Choose time slot"}
+                  </option>
+
+                  {availableTimeSlots.map((slot) => (
+                    <option
+                      key={slot.time}
+                      value={slot.time}
+                      disabled={slot.disabled}
+                    >
+                      {slot.label}
                     </option>
                   ))}
                 </select>
@@ -240,6 +461,7 @@ function BookAppointment() {
 
               <div className={styles.field}>
                 <label>Additional Notes (Optional)</label>
+
                 <textarea
                   name="notes"
                   value={form.notes}
@@ -253,7 +475,12 @@ function BookAppointment() {
                   <h3>Appointment Summary</h3>
 
                   <p>
-                    <strong>Treatment:</strong> {form.treatmentType}
+                    <strong>Treatment:</strong> {selectedTreatment?.name}
+                  </p>
+
+                  <p>
+                    <strong>Duration:</strong>{" "}
+                    {selectedTreatment?.duration_minutes} minutes
                   </p>
 
                   <p>
@@ -266,11 +493,22 @@ function BookAppointment() {
                     {new Date(form.date).toLocaleDateString("en-GB")} at{" "}
                     {form.time}
                   </p>
+
+                  {Number(selectedTreatment?.price || 0) > 0 && (
+                    <p>
+                      <strong>Price:</strong> ₪
+                      {Number(selectedTreatment?.price || 0)}
+                    </p>
+                  )}
                 </div>
               )}
 
               <div className={styles.actions}>
-                <button type="submit" className={styles.confirmBtn}>
+                <button
+                  type="submit"
+                  className={styles.confirmBtn}
+                  disabled={loadingData || treatmentTypes.length === 0}
+                >
                   <CalendarDays size={17} />
                   Confirm Booking
                 </button>
@@ -288,6 +526,7 @@ function BookAppointment() {
 
           <section className={styles.infoCard}>
             <h3>📌 Important:</h3>
+
             <ul>
               <li>Please arrive 10 minutes before your appointment</li>
               <li>Bring your insurance card and ID</li>

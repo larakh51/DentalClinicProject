@@ -11,6 +11,9 @@ const getAppointments = async (req, res) => {
         a.doctor_id,
         a.date,
         a.time,
+        a.end_time,
+        a.duration_minutes,
+        a.treatment_type_id,
         a.treatment_type,
         a.status,
         a.notes,
@@ -72,44 +75,117 @@ const createAppointment = async (req, res) => {
       doctorName,
       date,
       time,
+      treatmentTypeId,
       treatmentType,
       notes,
     } = req.body;
 
-    const [existing] = await pool.query(
-      `SELECT id FROM appointments
-       WHERE doctor_id = ? AND date = ? AND time = ? AND status != 'cancelled'`,
-      [doctorId, date, time],
+    if (!patientId || !doctorId || !date || !time) {
+      return res.status(400).json({
+        message: "Missing required fields",
+      });
+    }
+
+    let finalTreatmentType = treatmentType || null;
+    let durationMinutes = 30;
+    let finalTreatmentTypeId = treatmentTypeId || null;
+
+    if (treatmentTypeId) {
+      const [types] = await pool.query(
+        `SELECT id, name, duration_minutes
+         FROM treatment_types
+         WHERE id = ? AND status = 'active'`,
+        [treatmentTypeId],
+      );
+
+      if (types.length === 0) {
+        return res.status(400).json({
+          message: "Invalid treatment type",
+        });
+      }
+
+      finalTreatmentType = types[0].name;
+      durationMinutes = Number(types[0].duration_minutes || 30);
+      finalTreatmentTypeId = types[0].id;
+    }
+
+    if (!finalTreatmentType) {
+      return res.status(400).json({
+        message: "Treatment type is required",
+      });
+    }
+
+    const [[endResult]] = await pool.query(
+      `SELECT ADDTIME(?, SEC_TO_TIME(? * 60)) AS endTime`,
+      [time, durationMinutes],
     );
 
-    if (existing.length > 0) {
-      return res.status(409).json({ message: "This time is already booked" });
+    const endTime = endResult.endTime;
+
+    const [conflicts] = await pool.query(
+      `SELECT id, time, end_time
+       FROM appointments
+       WHERE doctor_id = ?
+         AND date = ?
+         AND status != 'cancelled'
+         AND time < ?
+         AND COALESCE(end_time, ADDTIME(time, SEC_TO_TIME(COALESCE(duration_minutes, 30) * 60))) > ?`,
+      [doctorId, date, endTime, time],
+    );
+
+    if (conflicts.length > 0) {
+      return res.status(409).json({
+        message: "This doctor is not available during the selected time",
+      });
     }
 
     const id = "a" + Date.now();
 
     await pool.query(
       `INSERT INTO appointments 
-       (id, patient_id, patient_name, doctor_id, doctor_name, date, time, treatment_type, status, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', ?)`,
+       (
+        id,
+        patient_id,
+        patient_name,
+        doctor_id,
+        doctor_name,
+        date,
+        time,
+        end_time,
+        duration_minutes,
+        treatment_type_id,
+        treatment_type,
+        status,
+        notes
+       )
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', ?)`,
       [
         id,
         patientId,
-        patientName,
+        patientName || null,
         doctorId,
-        doctorName,
+        doctorName || null,
         date,
         time,
-        treatmentType,
+        endTime,
+        durationMinutes,
+        finalTreatmentTypeId,
+        finalTreatmentType,
         notes || null,
       ],
     );
 
-    res.status(201).json({ message: "Appointment created successfully", id });
+    res.status(201).json({
+      message: "Appointment created successfully",
+      id,
+    });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to create appointment", error: error.message });
+    console.error("CREATE APPOINTMENT ERROR:", error);
+
+    res.status(500).json({
+      message: "Failed to create appointment",
+      error: error.sqlMessage || error.message,
+    });
   }
 };
 
@@ -126,7 +202,9 @@ const updateAppointmentStatus = async (req, res) => {
     ];
 
     if (!allowedStatuses.includes(status)) {
-      return res.status(400).json({ message: "Invalid appointment status" });
+      return res.status(400).json({
+        message: "Invalid appointment status",
+      });
     }
 
     await pool.query("UPDATE appointments SET status = ? WHERE id = ?", [
@@ -134,11 +212,16 @@ const updateAppointmentStatus = async (req, res) => {
       id,
     ]);
 
-    res.json({ message: "Appointment status updated successfully" });
+    res.json({
+      message: "Appointment status updated successfully",
+    });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to update status", error: error.message });
+    console.error("UPDATE APPOINTMENT STATUS ERROR:", error);
+
+    res.status(500).json({
+      message: "Failed to update status",
+      error: error.sqlMessage || error.message,
+    });
   }
 };
 
