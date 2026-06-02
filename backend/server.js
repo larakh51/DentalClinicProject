@@ -1,4 +1,5 @@
 const path = require("path");
+const reportsRoutes = require("./routes/reportsRoutes");
 
 require("dotenv").config({
   path: path.join(__dirname, ".env"),
@@ -48,6 +49,7 @@ app.use("/api/appointments", appointmentsRoutes);
 app.use("/api/treatments", treatmentsRoutes);
 app.use("/api/invoices", invoicesRoutes);
 app.use("/api/medical-records", medicalRecordsRoutes);
+app.use("/api/reports", reportsRoutes);
 
 app.get("/", (req, res) => {
   res.send("Dental Clinic API is running");
