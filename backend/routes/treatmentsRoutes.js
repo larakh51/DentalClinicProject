@@ -13,6 +13,7 @@ const { protect, allowRoles } = require("../middleWares/authMiddleware");
 
 router.get("/", protect, getTreatments);
 router.get("/:id", protect, getTreatmentById);
+
 router.post("/", protect, allowRoles("doctor", "manager"), createTreatment);
 router.put("/:id", protect, allowRoles("doctor", "manager"), updateTreatment);
 router.delete("/:id", protect, allowRoles("manager"), deleteTreatment);
