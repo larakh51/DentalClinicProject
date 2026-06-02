@@ -22,6 +22,8 @@ import ManagerPatients from "./pages/managerPatients/ManagerPatients";
 import ManagerStaff from "./pages/managerStaff/ManagerStaff";
 import ManagerAddEmployee from "./pages/managerAddEmployee/ManagerAddEmployee";
 import ManagerReports from "./pages/managerReports/ManagerReports";
+import ManagerFinance from "./pages/managerFinance/ManagerFinance";
+import ManagerSettings from "./pages/managerSettings/ManagerSettings";
 
 function App() {
   return (
@@ -156,6 +158,23 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["manager"]}>
               <ManagerReports />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager-finance"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <ManagerFinance />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/manager-settings"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <ManagerSettings />
             </ProtectedRoute>
           }
         />
