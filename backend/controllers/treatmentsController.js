@@ -4,33 +4,53 @@ const getTreatments = async (req, res) => {
   try {
     const { patientId, doctorId, appointmentId } = req.query;
 
-    let sql = "SELECT * FROM treatments WHERE 1=1";
+    let sql = `
+      SELECT
+        t.id,
+        t.appointment_id,
+        t.patient_id,
+        t.doctor_id,
+        t.description,
+        t.materials,
+        t.cost,
+        t.date,
+        CONCAT(patient.first_name, ' ', patient.last_name) AS patient_name,
+        CONCAT('Dr. ', doctor.first_name, ' ', doctor.last_name) AS doctor_name
+      FROM treatments t
+      LEFT JOIN users patient ON t.patient_id = patient.id
+      LEFT JOIN users doctor ON t.doctor_id = doctor.id
+      WHERE 1=1
+    `;
+
     const params = [];
 
     if (patientId) {
-      sql += " AND patient_id = ?";
+      sql += " AND t.patient_id = ?";
       params.push(patientId);
     }
 
     if (doctorId) {
-      sql += " AND doctor_id = ?";
+      sql += " AND t.doctor_id = ?";
       params.push(doctorId);
     }
 
     if (appointmentId) {
-      sql += " AND appointment_id = ?";
+      sql += " AND t.appointment_id = ?";
       params.push(appointmentId);
     }
 
-    sql += " ORDER BY date DESC";
+    sql += " ORDER BY t.date DESC";
 
     const [treatments] = await pool.query(sql, params);
 
     res.json(treatments);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to get treatments", error: error.message });
+    console.error("GET TREATMENTS ERROR:", error);
+
+    res.status(500).json({
+      message: "Failed to get treatments",
+      error: error.sqlMessage || error.message,
+    });
   }
 };
 
@@ -39,19 +59,40 @@ const getTreatmentById = async (req, res) => {
     const { id } = req.params;
 
     const [treatments] = await pool.query(
-      "SELECT * FROM treatments WHERE id = ?",
+      `
+      SELECT
+        t.id,
+        t.appointment_id,
+        t.patient_id,
+        t.doctor_id,
+        t.description,
+        t.materials,
+        t.cost,
+        t.date,
+        CONCAT(patient.first_name, ' ', patient.last_name) AS patient_name,
+        CONCAT('Dr. ', doctor.first_name, ' ', doctor.last_name) AS doctor_name
+      FROM treatments t
+      LEFT JOIN users patient ON t.patient_id = patient.id
+      LEFT JOIN users doctor ON t.doctor_id = doctor.id
+      WHERE t.id = ?
+      `,
       [id],
     );
 
     if (treatments.length === 0) {
-      return res.status(404).json({ message: "Treatment not found" });
+      return res.status(404).json({
+        message: "Treatment not found",
+      });
     }
 
     res.json(treatments[0]);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to get treatment", error: error.message });
+    console.error("GET TREATMENT BY ID ERROR:", error);
+
+    res.status(500).json({
+      message: "Failed to get treatment",
+      error: error.sqlMessage || error.message,
+    });
   }
 };
 
@@ -71,6 +112,14 @@ const createTreatment = async (req, res) => {
       date,
     } = req.body;
 
+    if (!patientId || !doctorId || !description || !cost || !date) {
+      await connection.rollback();
+
+      return res.status(400).json({
+        message: "Missing required fields",
+      });
+    }
+
     const id = "t" + Date.now();
 
     await connection.query(
@@ -79,7 +128,7 @@ const createTreatment = async (req, res) => {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
-        appointmentId,
+        appointmentId || null,
         patientId,
         doctorId,
         description,
@@ -114,9 +163,13 @@ const createTreatment = async (req, res) => {
     });
   } catch (error) {
     await connection.rollback();
-    res
-      .status(500)
-      .json({ message: "Failed to create treatment", error: error.message });
+
+    console.error("CREATE TREATMENT ERROR:", error);
+
+    res.status(500).json({
+      message: "Failed to create treatment",
+      error: error.sqlMessage || error.message,
+    });
   } finally {
     connection.release();
   }
@@ -134,11 +187,16 @@ const updateTreatment = async (req, res) => {
       [description, materials || null, cost, date, id],
     );
 
-    res.json({ message: "Treatment updated successfully" });
+    res.json({
+      message: "Treatment updated successfully",
+    });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to update treatment", error: error.message });
+    console.error("UPDATE TREATMENT ERROR:", error);
+
+    res.status(500).json({
+      message: "Failed to update treatment",
+      error: error.sqlMessage || error.message,
+    });
   }
 };
 
@@ -148,11 +206,16 @@ const deleteTreatment = async (req, res) => {
 
     await pool.query("DELETE FROM treatments WHERE id = ?", [id]);
 
-    res.json({ message: "Treatment deleted successfully" });
+    res.json({
+      message: "Treatment deleted successfully",
+    });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to delete treatment", error: error.message });
+    console.error("DELETE TREATMENT ERROR:", error);
+
+    res.status(500).json({
+      message: "Failed to delete treatment",
+      error: error.sqlMessage || error.message,
+    });
   }
 };
 
