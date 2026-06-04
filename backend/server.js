@@ -17,6 +17,7 @@ const appointmentsRoutes = require("./routes/appointmentsRoutes");
 const treatmentsRoutes = require("./routes/treatmentsRoutes");
 const invoicesRoutes = require("./routes/invoicesRoutes");
 const medicalRecordsRoutes = require("./routes/medicalRecordsRoutes");
+const availabilityRoutes = require("./routes/availabilityRoutes");
 
 const app = express();
 
@@ -52,6 +53,7 @@ app.use("/api/invoices", invoicesRoutes);
 app.use("/api/medical-records", medicalRecordsRoutes);
 app.use("/api/reports", reportsRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/availability", availabilityRoutes);
 
 app.get("/", (req, res) => {
   res.send("Dental Clinic API is running");
