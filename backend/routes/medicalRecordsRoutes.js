@@ -11,7 +11,7 @@ const { protect, allowRoles } = require("../middleWares/authMiddleware");
 router.get(
   "/patient/:patientId",
   protect,
-  allowRoles("doctor", "manager"),
+  allowRoles("patient", "doctor", "manager"),
   getMedicalRecordByPatient,
 );
 

@@ -4,6 +4,12 @@ const getMedicalRecordByPatient = async (req, res) => {
   try {
     const { patientId } = req.params;
 
+    if (req.user.role === "patient" && req.user.id !== patientId) {
+      return res.status(403).json({
+        message: "Access denied",
+      });
+    }
+
     const [records] = await pool.query(
       "SELECT * FROM medical_records WHERE patient_id = ?",
       [patientId],
@@ -22,9 +28,12 @@ const getMedicalRecordByPatient = async (req, res) => {
       treatments,
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to get medical record", error: error.message });
+    console.error("GET MEDICAL RECORD ERROR:", error);
+
+    res.status(500).json({
+      message: "Failed to get medical record",
+      error: error.sqlMessage || error.message,
+    });
   }
 };
 
@@ -46,7 +55,9 @@ const createOrUpdateMedicalRecord = async (req, res) => {
         [allergies || null, chronicDiseases || null, notes || null, patientId],
       );
 
-      return res.json({ message: "Medical record updated successfully" });
+      return res.json({
+        message: "Medical record updated successfully",
+      });
     }
 
     const id = "mr" + Date.now();
@@ -64,13 +75,17 @@ const createOrUpdateMedicalRecord = async (req, res) => {
       ],
     );
 
-    res
-      .status(201)
-      .json({ message: "Medical record created successfully", id });
+    res.status(201).json({
+      message: "Medical record created successfully",
+      id,
+    });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to save medical record", error: error.message });
+    console.error("SAVE MEDICAL RECORD ERROR:", error);
+
+    res.status(500).json({
+      message: "Failed to save medical record",
+      error: error.sqlMessage || error.message,
+    });
   }
 };
 

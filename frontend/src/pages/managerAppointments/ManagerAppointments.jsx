@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, Filter } from "lucide-react";
+import { CalendarDays, Filter, Search } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
@@ -10,20 +10,21 @@ function ManagerAppointments() {
   const { user } = useAuth();
 
   const [appointments, setAppointments] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const loadAppointments = async () => {
-      try {
-        const res = await api.get("/appointments");
-        setAppointments(res.data || []);
-      } catch (error) {
-        console.log("Failed to load appointments", error);
-        setError("Failed to load appointments");
-        setAppointments([]);
-      }
-    };
+  const loadAppointments = async () => {
+    try {
+      const res = await api.get("/appointments");
+      setAppointments(res.data || []);
+    } catch (error) {
+      console.log("Failed to load appointments", error);
+      setError("Failed to load appointments");
+      setAppointments([]);
+    }
+  };
 
+  useEffect(() => {
     loadAppointments();
   }, []);
 
@@ -31,6 +32,27 @@ function ManagerAppointments() {
     if (!date) return "";
     return new Date(date).toLocaleDateString("en-GB");
   };
+
+  const formatTime = (time) => {
+    if (!time) return "";
+    return String(time).slice(0, 5);
+  };
+
+  const filteredAppointments = appointments.filter((appointment) => {
+    const search = searchTerm.toLowerCase();
+
+    const patientName = String(appointment.patient_name || "").toLowerCase();
+    const doctorName = String(appointment.doctor_name || "").toLowerCase();
+    const treatment = String(appointment.treatment_type || "").toLowerCase();
+    const status = String(appointment.status || "").toLowerCase();
+
+    return (
+      patientName.includes(search) ||
+      doctorName.includes(search) ||
+      treatment.includes(search) ||
+      status.includes(search)
+    );
+  });
 
   return (
     <div className={styles.page}>
@@ -67,6 +89,16 @@ function ManagerAppointments() {
                 <p>All scheduled and past appointments</p>
               </div>
 
+              <div className={styles.searchBox}>
+                <Search size={19} />
+                <input
+                  type="text"
+                  placeholder="Search appointments..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+
               <button className={styles.filterBtn}>
                 <Filter size={17} />
                 Filter
@@ -85,16 +117,18 @@ function ManagerAppointments() {
                 <span>Actions</span>
               </div>
 
-              {appointments.length === 0 ? (
+              {filteredAppointments.length === 0 ? (
                 <div className={styles.emptyBox}>No appointments found</div>
               ) : (
-                appointments.map((appointment) => (
+                filteredAppointments.map((appointment) => (
                   <div className={styles.tableRow} key={appointment.id}>
                     <div>
                       <strong className={styles.dateText}>
                         {formatDate(appointment.date)}
                       </strong>
-                      <p className={styles.timeText}>{appointment.time}</p>
+                      <p className={styles.timeText}>
+                        {formatTime(appointment.time)}
+                      </p>
                     </div>
 
                     <span className={styles.patientName}>
