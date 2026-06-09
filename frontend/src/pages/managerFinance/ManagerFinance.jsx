@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CheckCircle, Clock3, DollarSign } from "lucide-react";
+import { CheckCircle, Clock3, DollarSign, Search } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
@@ -10,6 +10,7 @@ function ManagerFinance() {
   const { user } = useAuth();
 
   const [invoices, setInvoices] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [stats, setStats] = useState({
     totalRevenue: 0,
     collected: 0,
@@ -46,6 +47,24 @@ function ManagerFinance() {
     if (!date) return "";
     return new Date(date).toLocaleDateString("en-GB");
   };
+
+  const filteredInvoices = invoices.filter((invoice) => {
+    const search = searchTerm.toLowerCase();
+
+    const invoiceId = String(invoice.id || "").toLowerCase();
+    const patientName = String(invoice.patient_name || "").toLowerCase();
+    const date = formatDate(invoice.date).toLowerCase();
+    const amount = String(invoice.amount || "").toLowerCase();
+    const status = String(invoice.status || "").toLowerCase();
+
+    return (
+      invoiceId.includes(search) ||
+      patientName.includes(search) ||
+      date.includes(search) ||
+      amount.includes(search) ||
+      status.includes(search)
+    );
+  });
 
   return (
     <div className={styles.page}>
@@ -107,8 +126,20 @@ function ManagerFinance() {
 
           <section className={styles.card}>
             <div className={styles.cardHeader}>
-              <h2>All Invoices</h2>
-              <p>Complete payment history</p>
+              <div>
+                <h2>All Invoices</h2>
+                <p>Complete payment history</p>
+              </div>
+            </div>
+
+            <div className={styles.searchBox}>
+              <Search size={19} />
+              <input
+                type="text"
+                placeholder="Search invoices..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
 
             <div className={styles.table}>
@@ -120,10 +151,10 @@ function ManagerFinance() {
                 <span>Status</span>
               </div>
 
-              {invoices.length === 0 ? (
+              {filteredInvoices.length === 0 ? (
                 <div className={styles.emptyBox}>No invoices found</div>
               ) : (
-                invoices.map((invoice) => (
+                filteredInvoices.map((invoice) => (
                   <div className={styles.tableRow} key={invoice.id}>
                     <strong>#{invoice.id}</strong>
 

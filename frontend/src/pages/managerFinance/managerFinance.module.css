@@ -131,7 +131,7 @@
 }
 
 .cardHeader {
-  margin-bottom: 28px;
+  margin-bottom: 20px;
 }
 
 .cardHeader h2 {
@@ -145,6 +145,32 @@
   margin: 8px 0 0;
   color: #717187;
   font-size: 16px;
+}
+
+.searchBox {
+  height: 40px;
+  border-radius: 9px;
+  background: #f0f0f2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  color: #94a3b8;
+  margin-bottom: 24px;
+}
+
+.searchBox input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #111827;
+  font-size: 15px;
+  font-family: Arial, sans-serif;
+}
+
+.searchBox input::placeholder {
+  color: #717187;
 }
 
 .table {
