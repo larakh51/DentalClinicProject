@@ -10,6 +10,7 @@ import {
   Pill,
   Clock,
 } from "lucide-react";
+
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import Sidebar from "../../components/sidebar/Sidebar";
@@ -17,27 +18,57 @@ import styles from "./patientDashboard.module.css";
 
 function PatientDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [appointments, setAppointments] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [treatments, setTreatments] = useState([]);
-  const navigate = useNavigate();
+  const [medicalRecord, setMedicalRecord] = useState(null);
 
   useEffect(() => {
     const loadDashboardData = async () => {
       if (!user?.id) return;
 
       try {
-        const appointmentsRes = await api.get(
-          `/appointments?patientId=${user.id}`,
-        );
-        setAppointments(appointmentsRes.data || []);
+        const [appointmentsRes, invoicesRes, treatmentsRes, medicalRecordRes] =
+          await Promise.allSettled([
+            api.get(`/appointments?patientId=${user.id}`),
+            api.get(`/invoices?patientId=${user.id}`),
+            api.get(`/treatments?patientId=${user.id}`),
+            api.get(`/medical-records/patient/${user.id}`),
+          ]);
 
-        const invoicesRes = await api.get(`/invoices?patientId=${user.id}`);
-        setInvoices(invoicesRes.data || []);
+        if (appointmentsRes.status === "fulfilled") {
+          setAppointments(
+            Array.isArray(appointmentsRes.value.data)
+              ? appointmentsRes.value.data
+              : [],
+          );
+        }
 
-        const treatmentsRes = await api.get(`/treatments?patientId=${user.id}`);
-        setTreatments(treatmentsRes.data || []);
+        if (invoicesRes.status === "fulfilled") {
+          setInvoices(
+            Array.isArray(invoicesRes.value.data) ? invoicesRes.value.data : [],
+          );
+        }
+
+        if (treatmentsRes.status === "fulfilled") {
+          setTreatments(
+            Array.isArray(treatmentsRes.value.data)
+              ? treatmentsRes.value.data
+              : [],
+          );
+        }
+
+        if (medicalRecordRes.status === "fulfilled") {
+          const recordData = medicalRecordRes.value.data;
+
+          setMedicalRecord(recordData.medicalRecord || null);
+
+          if (Array.isArray(recordData.treatments)) {
+            setTreatments(recordData.treatments);
+          }
+        }
       } catch (error) {
         console.log("Failed to load patient dashboard", error);
       }
@@ -46,19 +77,60 @@ function PatientDashboard() {
     loadDashboardData();
   }, [user]);
 
+  const today = new Date().toISOString().split("T")[0];
+
+  const formatTime = (time) => {
+    if (!time) return "";
+    return String(time).slice(0, 5);
+  };
+
+  const formatDate = (date, options) => {
+    if (!date) return "";
+    return new Date(date).toLocaleDateString("en-GB", options);
+  };
+
   const pendingInvoices = invoices.filter(
     (invoice) => invoice.status !== "paid",
   );
 
-  const totalSpent = invoices.reduce((sum, invoice) => {
+  const pendingAmount = pendingInvoices.reduce((sum, invoice) => {
     return sum + Number(invoice.amount || 0);
   }, 0);
 
-  const upcomingAppointments = appointments.filter(
-    (appointment) => appointment.status !== "cancelled",
+  const totalSpent = invoices
+    .filter((invoice) => invoice.status === "paid")
+    .reduce((sum, invoice) => {
+      return sum + Number(invoice.amount || 0);
+    }, 0);
+
+  const upcomingAppointments = appointments
+    .filter((appointment) => {
+      const status = String(appointment.status || "").toLowerCase();
+
+      return (
+        appointment.date >= today &&
+        status !== "cancelled" &&
+        status !== "completed"
+      );
+    })
+    .sort((a, b) => {
+      const dateA = `${a.date} ${formatTime(a.time)}`;
+      const dateB = `${b.date} ${formatTime(b.time)}`;
+
+      return dateA.localeCompare(dateB);
+    });
+
+  const completedAppointments = appointments.filter(
+    (appointment) => appointment.status === "completed",
   );
 
   const nextAppointment = upcomingAppointments[0];
+
+  const allergies = medicalRecord?.allergies || "None reported";
+
+  const conditions = medicalRecord?.chronic_diseases || "None reported";
+
+  const medications = medicalRecord?.medications || "None reported";
 
   return (
     <div className={styles.page}>
@@ -89,16 +161,14 @@ function PatientDashboard() {
                 <span>
                   Next:{" "}
                   {nextAppointment
-                    ? new Date(nextAppointment.date).toLocaleDateString(
-                        "en-GB",
-                        {
-                          day: "2-digit",
-                          month: "short",
-                        },
-                      )
+                    ? formatDate(nextAppointment.date, {
+                        day: "2-digit",
+                        month: "short",
+                      })
                     : "No visits"}
                 </span>
               </div>
+
               <div className={styles.iconBoxBlue}>
                 <Calendar size={22} />
               </div>
@@ -107,9 +177,10 @@ function PatientDashboard() {
             <div className={`${styles.statCard} ${styles.orange}`}>
               <div>
                 <h3>Pending Payments</h3>
-                <strong>₪{pendingInvoices.length}</strong>
+                <strong>₪{pendingAmount}</strong>
                 <p>{pendingInvoices.length} invoice(s)</p>
               </div>
+
               <div className={styles.iconBoxOrange}>
                 <CreditCard size={22} />
               </div>
@@ -120,11 +191,9 @@ function PatientDashboard() {
                 <h3>Total Visits</h3>
                 <strong>{appointments.length}</strong>
                 <p>All time visits</p>
-                <span>
-                  {appointments.filter((a) => a.status === "completed").length}{" "}
-                  completed recently
-                </span>
+                <span>{completedAppointments.length} completed</span>
               </div>
+
               <div className={styles.iconBoxGreen}>
                 <Activity size={22} />
               </div>
@@ -134,9 +203,10 @@ function PatientDashboard() {
               <div>
                 <h3>Total Spent</h3>
                 <strong>₪{totalSpent}</strong>
-                <p>Lifetime</p>
+                <p>Paid invoices</p>
                 <span>{invoices.length} total invoices</span>
               </div>
+
               <div className={styles.iconBoxPurple}>
                 <FileText size={22} />
               </div>
@@ -174,7 +244,7 @@ function PatientDashboard() {
                 upcomingAppointments.slice(0, 3).map((appointment) => (
                   <div className={styles.tableRow} key={appointment.id}>
                     <span className={styles.dateBadge}>
-                      {new Date(appointment.date).toLocaleDateString("en-GB", {
+                      {formatDate(appointment.date, {
                         weekday: "short",
                         day: "2-digit",
                         month: "short",
@@ -183,10 +253,11 @@ function PatientDashboard() {
 
                     <span className={styles.timeCell}>
                       <Clock size={14} />
-                      {appointment.time}
+                      {formatTime(appointment.time)}
                     </span>
 
                     <span>{appointment.doctor_name}</span>
+
                     <span className={styles.muted}>
                       {appointment.treatment_type}
                     </span>
@@ -216,7 +287,7 @@ function PatientDashboard() {
               <AlertCircle size={20} />
               <div>
                 <h4>Allergies</h4>
-                <p>None reported</p>
+                <p>{allergies}</p>
               </div>
             </div>
 
@@ -224,7 +295,7 @@ function PatientDashboard() {
               <Heart size={20} />
               <div>
                 <h4>Conditions</h4>
-                <p>None reported</p>
+                <p>{conditions}</p>
               </div>
             </div>
 
@@ -232,11 +303,17 @@ function PatientDashboard() {
               <Pill size={20} />
               <div>
                 <h4>Medications</h4>
-                <p>None reported</p>
+                <p>{medications}</p>
               </div>
             </div>
 
-            <button className={styles.outlineButton}>View Full Record</button>
+            <button
+              type="button"
+              className={styles.outlineButton}
+              onClick={() => navigate("/medical-records")}
+            >
+              View Full Record
+            </button>
           </section>
 
           <section className={styles.card}>
@@ -246,7 +323,13 @@ function PatientDashboard() {
                 <p>Your treatment history</p>
               </div>
 
-              <button className={styles.smallOutline}>View All</button>
+              <button
+                type="button"
+                className={styles.smallOutline}
+                onClick={() => navigate("/medical-records")}
+              >
+                View All
+              </button>
             </div>
 
             <div className={styles.treatmentsList}>
@@ -257,10 +340,9 @@ function PatientDashboard() {
                   <div className={styles.treatmentItem} key={treatment.id}>
                     <div>
                       <h4>{treatment.description}</h4>
-                      <p>
-                        {new Date(treatment.date).toLocaleDateString("en-GB")}
-                      </p>
+                      <p>{formatDate(treatment.date)}</p>
                     </div>
+
                     <strong>₪{treatment.cost}</strong>
                   </div>
                 ))
@@ -269,25 +351,35 @@ function PatientDashboard() {
           </section>
 
           <section className={styles.quickActions}>
-            <div className={styles.actionCard}>
+            <button
+              type="button"
+              className={styles.actionCard}
+              onClick={() => navigate("/medical-records")}
+            >
               <div className={styles.iconBoxPurple}>
                 <FileText size={22} />
               </div>
+
               <div>
                 <h3>Medical Record</h3>
                 <p>View your health information</p>
               </div>
-            </div>
+            </button>
 
-            <div className={styles.actionCard}>
+            <button
+              type="button"
+              className={styles.actionCard}
+              onClick={() => navigate("/profile")}
+            >
               <div className={styles.iconBoxGreen}>
                 <Activity size={22} />
               </div>
+
               <div>
                 <h3>Update Profile</h3>
                 <p>Manage your account settings</p>
               </div>
-            </div>
+            </button>
           </section>
         </section>
       </main>
