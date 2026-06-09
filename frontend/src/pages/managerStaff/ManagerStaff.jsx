@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Mail, Phone, UserPlus } from "lucide-react";
+import { Mail, Phone, UserPlus, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import Sidebar from "../../components/sidebar/Sidebar";
@@ -10,6 +11,7 @@ function ManagerStaff() {
   const { user } = useAuth();
 
   const [staff, setStaff] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
@@ -28,8 +30,31 @@ function ManagerStaff() {
     loadStaff();
   }, []);
 
-  const doctors = staff.filter((employee) => employee.role === "doctor");
-  const managers = staff.filter((employee) => employee.role === "manager");
+  const filteredStaff = staff.filter((employee) => {
+    const search = searchTerm.toLowerCase();
+
+    const fullName = `${employee.first_name || ""} ${
+      employee.last_name || ""
+    }`.toLowerCase();
+
+    const email = String(employee.email || "").toLowerCase();
+    const phone = String(employee.phone || "").toLowerCase();
+    const role = String(employee.role || "").toLowerCase();
+
+    return (
+      fullName.includes(search) ||
+      email.includes(search) ||
+      phone.includes(search) ||
+      role.includes(search)
+    );
+  });
+
+  const doctors = filteredStaff.filter(
+    (employee) => employee.role === "doctor",
+  );
+  const managers = filteredStaff.filter(
+    (employee) => employee.role === "manager",
+  );
 
   const getInitials = (employee) => {
     const first = employee.first_name?.[0] || "";
@@ -63,6 +88,16 @@ function ManagerStaff() {
               <UserPlus size={17} />
               Add Employee
             </button>
+          </div>
+
+          <div className={styles.searchBox}>
+            <Search size={19} />
+            <input
+              type="text"
+              placeholder="Search staff..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
 
           {error && <div className={styles.errorBox}>{error}</div>}
