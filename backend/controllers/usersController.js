@@ -217,21 +217,170 @@ const getUserById = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { firstName, lastName, phone, email, status } = req.body;
+
+    if (req.user.role !== "manager" && req.user.id !== id) {
+      return res.status(403).json({
+        message: "Access denied",
+      });
+    }
+
+    const { firstName, lastName, phone, email, status, avatar, role } =
+      req.body;
+
+    const fields = [];
+    const values = [];
+
+    if (firstName !== undefined) {
+      fields.push("first_name = ?");
+      values.push(firstName);
+    }
+
+    if (lastName !== undefined) {
+      fields.push("last_name = ?");
+      values.push(lastName);
+    }
+
+    if (phone !== undefined) {
+      fields.push("phone = ?");
+      values.push(phone);
+    }
+
+    if (email !== undefined) {
+      fields.push("email = ?");
+      values.push(email);
+    }
+
+    if (avatar !== undefined) {
+      fields.push("avatar = ?");
+      values.push(avatar);
+    }
+
+    if (status !== undefined && req.user.role === "manager") {
+      fields.push("status = ?");
+      values.push(status);
+    }
+
+    if (role !== undefined && req.user.role === "manager") {
+      fields.push("role = ?");
+      values.push(role);
+    }
+
+    if (fields.length === 0) {
+      return res.status(400).json({
+        message: "No fields to update",
+      });
+    }
+
+    values.push(id);
 
     await pool.query(
       `UPDATE users
-       SET first_name = ?, last_name = ?, phone = ?, email = ?, status = ?
+       SET ${fields.join(", ")}
        WHERE id = ?`,
-      [firstName, lastName, phone, email, status || "active", id],
+      values,
     );
+
+    const [updatedUsers] = await pool.query(
+      `SELECT id, email, role, first_name, last_name, phone, birth_date, id_number, avatar, status
+       FROM users
+       WHERE id = ?`,
+      [id],
+    );
+
+    if (updatedUsers.length === 0) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    const updatedUser = updatedUsers[0];
+
+    if (req.session?.user?.id === id) {
+      req.session.user = {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        firstName: updatedUser.first_name,
+        lastName: updatedUser.last_name,
+        phone: updatedUser.phone,
+        birthDate: updatedUser.birth_date,
+        idNumber: updatedUser.id_number,
+        avatar: updatedUser.avatar,
+        status: updatedUser.status,
+      };
+    }
 
     res.json({
       message: "User updated successfully",
+      user: updatedUser,
     });
   } catch (error) {
+    console.error("UPDATE USER ERROR:", error);
+
     res.status(500).json({
       message: "Failed to update user",
+      error: error.sqlMessage || error.message,
+    });
+  }
+};
+
+const changePassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { currentPassword, newPassword } = req.body;
+
+    if (req.user.id !== id) {
+      return res.status(403).json({
+        message: "Access denied",
+      });
+    }
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        message: "Current password and new password are required",
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        message: "Password must be at least 6 characters",
+      });
+    }
+
+    const [users] = await pool.query(
+      "SELECT id, password FROM users WHERE id = ?",
+      [id],
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, users[0].password);
+
+    if (!isMatch) {
+      return res.status(400).json({
+        message: "Current password is incorrect",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await pool.query("UPDATE users SET password = ? WHERE id = ?", [
+      hashedPassword,
+      id,
+    ]);
+
+    res.json({
+      message: "Password changed successfully",
+    });
+  } catch (error) {
+    console.error("CHANGE PASSWORD ERROR:", error);
+
+    res.status(500).json({
+      message: "Failed to change password",
       error: error.sqlMessage || error.message,
     });
   }
@@ -241,7 +390,17 @@ const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
 
+    if (req.user.role !== "manager" && req.user.id !== id) {
+      return res.status(403).json({
+        message: "Access denied",
+      });
+    }
+
     await pool.query("UPDATE users SET status = 'inactive' WHERE id = ?", [id]);
+
+    if (req.user.id === id && req.session) {
+      req.session.destroy(() => {});
+    }
 
     res.json({
       message: "User deleted successfully",
@@ -261,5 +420,6 @@ module.exports = {
   createEmployee,
   getUserById,
   updateUser,
+  changePassword,
   deleteUser,
 };

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { UserRound, Mail, Phone, Lock, Shield, Trash2 } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
@@ -7,9 +8,16 @@ import Sidebar from "../../components/sidebar/Sidebar";
 import styles from "./profile.module.css";
 
 function Profile() {
-  const { user, checkAuth } = useAuth();
+  const { user, checkAuth, logout } = useAuth();
+  const navigate = useNavigate();
+  const avatarInputRef = useRef(null);
 
   const [isEditing, setIsEditing] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState(user?.avatar || "");
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+
   const [form, setForm] = useState({
     firstName: user?.firstName || "",
     lastName: user?.lastName || "",
@@ -17,14 +25,43 @@ function Profile() {
     phone: user?.phone || "",
   });
 
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   const initials = `${user?.firstName?.[0] || ""}${user?.lastName?.[0] || ""}`;
 
+  useEffect(() => {
+    setForm({
+      firstName: user?.firstName || "",
+      lastName: user?.lastName || "",
+      email: user?.email || "",
+      phone: user?.phone || "",
+    });
+
+    setAvatarPreview(user?.avatar || "");
+
+    if (user?.id) {
+      const savedTwoFactor = localStorage.getItem(`twoFactor-${user.id}`);
+      setTwoFactorEnabled(savedTwoFactor === "true");
+    }
+  }, [user]);
+
   const handleChange = (e) => {
     setForm({
       ...form,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handlePasswordInputChange = (e) => {
+    setPasswordForm({
+      ...passwordForm,
       [e.target.name]: e.target.value,
     });
   };
@@ -61,13 +98,154 @@ function Profile() {
     setSuccess("");
   };
 
+  const handleAvatarClick = () => {
+    avatarInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files?.[0];
+
+    if (!file) return;
+
+    setError("");
+    setSuccess("");
+
+    if (!file.type.startsWith("image/")) {
+      setError("Please select an image file");
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onloadend = async () => {
+      try {
+        const avatar = reader.result;
+
+        setAvatarPreview(avatar);
+
+        await api.put(`/users/${user.id}`, {
+          avatar,
+        });
+
+        await checkAuth();
+
+        setSuccess("Avatar updated successfully");
+      } catch (err) {
+        setError(
+          err.response?.data?.message ||
+            err.response?.data?.error ||
+            "Failed to update avatar",
+        );
+      }
+    };
+
+    reader.readAsDataURL(file);
+  };
+
+  const openPasswordModal = () => {
+    setError("");
+    setSuccess("");
+    setShowPasswordModal(true);
+  };
+
+  const closePasswordModal = () => {
+    setShowPasswordModal(false);
+    setPasswordForm({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    });
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+
+    setError("");
+    setSuccess("");
+
+    if (passwordForm.newPassword.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    try {
+      await api.put(`/users/${user.id}/password`, {
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
+
+      closePasswordModal();
+      setSuccess("Password changed successfully");
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Failed to change password",
+      );
+    }
+  };
+
+  const handleToggleTwoFactor = () => {
+    setError("");
+    setSuccess("");
+
+    const nextValue = !twoFactorEnabled;
+
+    setTwoFactorEnabled(nextValue);
+
+    if (user?.id) {
+      localStorage.setItem(`twoFactor-${user.id}`, String(nextValue));
+    }
+
+    setSuccess(
+      nextValue
+        ? "Two-factor authentication enabled"
+        : "Two-factor authentication disabled",
+    );
+  };
+
+  const handleDeleteAccount = async () => {
+    setError("");
+    setSuccess("");
+
+    try {
+      await api.delete(`/users/${user.id}`);
+
+      await logout();
+      navigate("/login");
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Failed to delete account",
+      );
+
+      setShowDeleteModal(false);
+    }
+  };
+
   return (
     <div className={styles.page}>
       <Sidebar />
 
       <main className={styles.main}>
         <header className={styles.topBar}>
-          <div className={styles.userCircle}>{initials}</div>
+          <div className={styles.userCircle}>
+            {avatarPreview ? (
+              <img
+                src={avatarPreview}
+                alt="Avatar"
+                className={styles.avatarImage}
+              />
+            ) : (
+              initials
+            )}
+          </div>
         </header>
 
         <section className={styles.content}>
@@ -77,7 +255,17 @@ function Profile() {
           </div>
 
           <section className={styles.profileCard}>
-            <div className={styles.bigAvatar}>{initials}</div>
+            <div className={styles.bigAvatar}>
+              {avatarPreview ? (
+                <img
+                  src={avatarPreview}
+                  alt="Avatar"
+                  className={styles.avatarImage}
+                />
+              ) : (
+                initials
+              )}
+            </div>
 
             <div>
               <h2>
@@ -85,7 +273,21 @@ function Profile() {
               </h2>
               <p>{user?.email}</p>
 
-              <button className={styles.avatarBtn}>Change Avatar</button>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className={styles.hiddenFileInput}
+                onChange={handleAvatarChange}
+              />
+
+              <button
+                type="button"
+                className={styles.avatarBtn}
+                onClick={handleAvatarClick}
+              >
+                Change Avatar
+              </button>
             </div>
           </section>
 
@@ -98,6 +300,7 @@ function Profile() {
 
               {!isEditing ? (
                 <button
+                  type="button"
                   className={styles.darkBtn}
                   onClick={() => setIsEditing(true)}
                 >
@@ -105,11 +308,19 @@ function Profile() {
                 </button>
               ) : (
                 <div className={styles.editActions}>
-                  <button className={styles.saveBtn} onClick={handleSave}>
+                  <button
+                    type="button"
+                    className={styles.saveBtn}
+                    onClick={handleSave}
+                  >
                     Save
                   </button>
 
-                  <button className={styles.cancelBtn} onClick={handleCancel}>
+                  <button
+                    type="button"
+                    className={styles.cancelBtn}
+                    onClick={handleCancel}
+                  >
                     Cancel
                   </button>
                 </div>
@@ -194,16 +405,28 @@ function Profile() {
                 <p>Last changed 3 months ago</p>
               </div>
 
-              <button className={styles.outlineBtn}>Change Password</button>
+              <button
+                type="button"
+                className={styles.outlineBtn}
+                onClick={openPasswordModal}
+              >
+                Change Password
+              </button>
             </div>
 
             <div className={styles.securityItem}>
               <div>
                 <h3>Two-Factor Authentication</h3>
-                <p>Not enabled</p>
+                <p>{twoFactorEnabled ? "Enabled" : "Not enabled"}</p>
               </div>
 
-              <button className={styles.outlineBtn}>Enable</button>
+              <button
+                type="button"
+                className={styles.outlineBtn}
+                onClick={handleToggleTwoFactor}
+              >
+                {twoFactorEnabled ? "Disable" : "Enable"}
+              </button>
             </div>
           </section>
 
@@ -217,13 +440,103 @@ function Profile() {
                 <p>Permanently delete your account and all data</p>
               </div>
 
-              <button className={styles.deleteBtn}>
+              <button
+                type="button"
+                className={styles.deleteBtn}
+                onClick={() => setShowDeleteModal(true)}
+              >
                 <Trash2 size={16} />
                 Delete
               </button>
             </div>
           </section>
         </section>
+
+        {showPasswordModal && (
+          <div className={styles.modalOverlay}>
+            <form className={styles.modalCard} onSubmit={handleChangePassword}>
+              <div className={styles.modalHeader}>
+                <h2>Change Password</h2>
+
+                <button type="button" onClick={closePasswordModal}>
+                  ×
+                </button>
+              </div>
+
+              <div className={styles.modalForm}>
+                <label>
+                  Current Password
+                  <input
+                    type="password"
+                    name="currentPassword"
+                    value={passwordForm.currentPassword}
+                    onChange={handlePasswordInputChange}
+                    required
+                  />
+                </label>
+
+                <label>
+                  New Password
+                  <input
+                    type="password"
+                    name="newPassword"
+                    value={passwordForm.newPassword}
+                    onChange={handlePasswordInputChange}
+                    required
+                  />
+                </label>
+
+                <label>
+                  Confirm Password
+                  <input
+                    type="password"
+                    name="confirmPassword"
+                    value={passwordForm.confirmPassword}
+                    onChange={handlePasswordInputChange}
+                    required
+                  />
+                </label>
+              </div>
+
+              <div className={styles.modalActions}>
+                <button type="button" onClick={closePasswordModal}>
+                  Cancel
+                </button>
+
+                <button type="submit">Save Password</button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {showDeleteModal && (
+          <div className={styles.modalOverlay}>
+            <div className={styles.modalCard}>
+              <div className={styles.modalHeader}>
+                <h2>Delete Account</h2>
+
+                <button type="button" onClick={() => setShowDeleteModal(false)}>
+                  ×
+                </button>
+              </div>
+
+              <p className={styles.deleteText}>
+                Are you sure you want to delete your account? This action cannot
+                be undone.
+              </p>
+
+              <div className={styles.modalActions}>
+                <button type="button" onClick={() => setShowDeleteModal(false)}>
+                  Cancel
+                </button>
+
+                <button type="button" onClick={handleDeleteAccount}>
+                  Delete Account
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

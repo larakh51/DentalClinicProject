@@ -8,6 +8,7 @@ const {
   createEmployee,
   getUserById,
   updateUser,
+  changePassword,
   deleteUser,
 } = require("../controllers/usersController");
 
@@ -18,8 +19,10 @@ router.get("/doctors", getDoctors);
 router.get("/patients", getPatientsForDoctor);
 router.post("/employees", protect, allowRoles("manager"), createEmployee);
 
+router.put("/:id/password", protect, changePassword);
+
 router.get("/:id", protect, getUserById);
 router.put("/:id", protect, updateUser);
-router.delete("/:id", protect, allowRoles("manager"), deleteUser);
+router.delete("/:id", protect, deleteUser);
 
 module.exports = router;
