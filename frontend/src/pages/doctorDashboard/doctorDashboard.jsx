@@ -20,6 +20,7 @@ function DoctorDashboard() {
 
   const [appointments, setAppointments] = useState([]);
   const [patients, setPatients] = useState([]);
+  const [viewingAppointment, setViewingAppointment] = useState(null);
 
   useEffect(() => {
     const loadDoctorDashboard = async () => {
@@ -305,7 +306,13 @@ function DoctorDashboard() {
                     {appointment.status}
                   </span>
 
-                  <button className={styles.viewBtn}>View</button>
+                  <button
+                    type="button"
+                    className={styles.viewBtn}
+                    onClick={() => setViewingAppointment(appointment)}
+                  >
+                    View
+                  </button>
                 </div>
               ))}
             </div>
@@ -422,6 +429,86 @@ function DoctorDashboard() {
             </button>
           </section>
         </section>
+
+        {viewingAppointment && (
+          <div
+            className={styles.modalOverlay}
+            onClick={() => setViewingAppointment(null)}
+          >
+            <div
+              className={styles.modalCard}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={styles.modalHeader}>
+                <div>
+                  <h2>Appointment Details</h2>
+                  <p>View appointment information</p>
+                </div>
+
+                <button
+                  type="button"
+                  className={styles.closeBtn}
+                  onClick={() => setViewingAppointment(null)}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className={styles.detailsGrid}>
+                <div className={styles.detailItem}>
+                  <span className={styles.detailLabel}>Patient</span>
+                  <p>{viewingAppointment.patient_name || "Not available"}</p>
+                </div>
+
+                <div className={styles.detailItem}>
+                  <span className={styles.detailLabel}>Date</span>
+                  <p>
+                    {viewingAppointment.date
+                      ? new Date(viewingAppointment.date).toLocaleDateString(
+                          "en-GB",
+                        )
+                      : "Not available"}
+                  </p>
+                </div>
+
+                <div className={styles.detailItem}>
+                  <span className={styles.detailLabel}>Time</span>
+                  <p>
+                    {viewingAppointment.time
+                      ? String(viewingAppointment.time).slice(0, 5)
+                      : "Not available"}
+                  </p>
+                </div>
+
+                <div className={styles.detailItem}>
+                  <span className={styles.detailLabel}>Status</span>
+
+                  <span
+                    className={`${styles.status} ${
+                      styles[
+                        String(viewingAppointment.status || "").toLowerCase()
+                      ] || ""
+                    }`}
+                  >
+                    {viewingAppointment.status || "Not available"}
+                  </span>
+                </div>
+
+                <div className={`${styles.detailItem} ${styles.fullDetail}`}>
+                  <span className={styles.detailLabel}>Treatment</span>
+                  <p>{viewingAppointment.treatment_type || "Not available"}</p>
+                </div>
+
+                <div className={`${styles.detailItem} ${styles.fullDetail}`}>
+                  <span className={styles.detailLabel}>Notes</span>
+                  <p className={styles.notesText}>
+                    {viewingAppointment.notes || "No notes were added"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
