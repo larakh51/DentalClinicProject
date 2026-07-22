@@ -250,22 +250,6 @@ function ManagerSettings() {
 
             <div className={styles.toggleRow}>
               <div>
-                <h3>SMS Reminders</h3>
-                <p>Send SMS to patients 24h before appointments</p>
-              </div>
-
-              <button
-                className={`${styles.toggle} ${
-                  settings.sms_reminders === "1" ? styles.on : ""
-                }`}
-                onClick={() => toggleSetting("sms_reminders")}
-              >
-                <span />
-              </button>
-            </div>
-
-            <div className={styles.toggleRow}>
-              <div>
                 <h3>Automatic Invoicing</h3>
                 <p>Generate invoices after appointments</p>
               </div>
