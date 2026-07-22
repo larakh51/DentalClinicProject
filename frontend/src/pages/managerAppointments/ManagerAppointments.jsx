@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { CalendarDays, Filter, Search } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
@@ -8,6 +9,7 @@ import styles from "./managerAppointments.module.css";
 
 function ManagerAppointments() {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [appointments, setAppointments] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -180,7 +182,7 @@ function ManagerAppointments() {
 
             <button
               className={styles.newBtn}
-              onClick={() => alert("New appointment page will be added later")}
+              onClick={() => navigate("/manager-book-appointment")}
             >
               <CalendarDays size={17} />
               New Appointment

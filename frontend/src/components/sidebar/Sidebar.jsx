@@ -105,11 +105,6 @@ function Sidebar() {
       icon: <UsersRound size={20} />,
     },
     {
-      to: "/manager-patients/add",
-      label: "Add Patient",
-      icon: <UserPlus size={20} />,
-    },
-    {
       to: "/manager-staff",
       label: "Staff",
       icon: <BriefcaseBusiness size={20} />,

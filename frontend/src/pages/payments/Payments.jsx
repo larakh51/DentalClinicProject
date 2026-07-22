@@ -211,27 +211,6 @@ Thank you for choosing Dental Clinic.
               )}
             </div>
           </section>
-
-          <section className={styles.methodsCard}>
-            <h2>Payment Methods Accepted</h2>
-
-            <div className={styles.methods}>
-              <div>
-                <CreditCard size={17} />
-                <span>Credit/Debit Cards</span>
-              </div>
-
-              <div>
-                <CreditCard size={17} />
-                <span>Bank Transfer</span>
-              </div>
-
-              <div>
-                <CreditCard size={17} />
-                <span>Insurance Claims</span>
-              </div>
-            </div>
-          </section>
         </section>
       </main>
     </div>

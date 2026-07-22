@@ -131,6 +131,24 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="/manager-book-appointment"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <BookAppointment />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/doctor-book-appointment"
+          element={
+            <ProtectedRoute allowedRoles={["doctor"]}>
+              <BookAppointment />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/manager-patients"
           element={

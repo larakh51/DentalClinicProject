@@ -145,7 +145,7 @@
 }
 
 .timeBox {
-  width: 58px;
+  width: 65px;
   height: 58px;
   min-width: 58px;
   border-radius: 9px;
@@ -210,6 +210,31 @@
   background: #fee2e2;
   color: #dc2626;
 }
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.newBtn {
+  height: 40px;
+  border: none;
+  border-radius: 8px;
+  background: #030217;
+  color: #ffffff;
+  padding: 0 18px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.newBtn:hover {
+  background: #090827;
+}
 
 @media (max-width: 650px) {
   .content {
@@ -231,5 +256,18 @@
   .nameRow {
     flex-direction: column;
     align-items: flex-start;
+  }
+  .headerRow {
+    flex-direction: column;
+    margin-bottom: 24px;
+  }
+
+  .pageHeader {
+    margin-bottom: 0;
+  }
+
+  .newBtn {
+    width: 100%;
+    justify-content: center;
   }
 }
