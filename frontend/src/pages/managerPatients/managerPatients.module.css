@@ -226,6 +226,238 @@
   font-weight: 600;
 }
 
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 20px;
+}
+
+.modalCard {
+  width: 100%;
+  max-width: 700px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 22px;
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.22);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.modalHeader h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #111827;
+}
+
+.modalHeader button {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 26px;
+  cursor: pointer;
+}
+
+.patientModalHeader {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modalAvatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #dbeafe;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 700;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.patientModalHeader h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 19px;
+}
+
+.patientModalHeader p {
+  margin: 6px 0 0;
+  color: #52617a;
+  font-size: 14px;
+}
+
+.detailsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.detailItem {
+  border: 1px solid #e5e7eb;
+  border-radius: 9px;
+  padding: 13px;
+}
+
+.detailItem span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.detailItem strong {
+  color: #111827;
+  font-size: 14px;
+}
+
+.recordSection,
+.appointmentsSection {
+  margin-top: 24px;
+}
+
+.recordSection h3,
+.appointmentsSection h3 {
+  margin: 0 0 14px;
+  color: #111827;
+  font-size: 16px;
+}
+
+.medicalItem {
+  border: 1px solid #e5e7eb;
+  border-radius: 9px;
+  padding: 13px;
+  margin-bottom: 10px;
+}
+
+.medicalItem span {
+  display: block;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.medicalItem p {
+  margin: 0;
+  color: #52617a;
+  font-size: 14px;
+}
+
+.appointmentsList {
+  display: flex;
+  flex-direction: column;
+}
+
+.appointmentItem {
+  min-height: 64px;
+  padding: 12px 0;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.appointmentItem:last-child {
+  border-bottom: none;
+}
+
+.appointmentItem strong {
+  color: #111827;
+  font-size: 14px;
+}
+
+.appointmentItem p {
+  margin: 6px 0 0;
+  color: #52617a;
+  font-size: 13px;
+}
+
+.appointmentRight {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 7px;
+  text-align: right;
+}
+
+.appointmentRight span {
+  color: #52617a;
+  font-size: 13px;
+}
+
+.modalStatus {
+  width: fit-content;
+  border-radius: 8px;
+  padding: 4px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.scheduled {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.confirmed {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.completed {
+  background: #edf2f7;
+  color: #334155;
+}
+
+.cancelled {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.emptyAppointments {
+  padding: 16px 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 22px;
+}
+
+.modalActions button {
+  height: 38px;
+  border: none;
+  border-radius: 8px;
+  background: #030217;
+  color: #ffffff;
+  padding: 0 18px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 @media (max-width: 900px) {
   .tableHead {
     display: none;
@@ -250,5 +482,19 @@
   .addBtn {
     width: 100%;
     justify-content: center;
+  }
+
+  .detailsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .appointmentItem {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .appointmentRight {
+    align-items: flex-start;
+    text-align: left;
   }
 }
