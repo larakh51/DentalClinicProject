@@ -11,6 +11,17 @@ function ManagerAppointments() {
 
   const [appointments, setAppointments] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("");
+  const [editingAppointment, setEditingAppointment] = useState(null);
+  const [editForm, setEditForm] = useState({
+    date: "",
+    time: "",
+    treatmentType: "",
+    status: "",
+    notes: "",
+  });
   const [error, setError] = useState("");
 
   const loadAppointments = async () => {
@@ -38,6 +49,11 @@ function ManagerAppointments() {
     return String(time).slice(0, 5);
   };
 
+  const formatInputDate = (date) => {
+    if (!date) return "";
+    return String(date).split("T")[0];
+  };
+
   const filteredAppointments = appointments.filter((appointment) => {
     const search = searchTerm.toLowerCase();
 
@@ -45,14 +61,103 @@ function ManagerAppointments() {
     const doctorName = String(appointment.doctor_name || "").toLowerCase();
     const treatment = String(appointment.treatment_type || "").toLowerCase();
     const status = String(appointment.status || "").toLowerCase();
+    const appointmentDate = formatInputDate(appointment.date);
 
-    return (
+    const matchesSearch =
       patientName.includes(search) ||
       doctorName.includes(search) ||
       treatment.includes(search) ||
-      status.includes(search)
-    );
+      status.includes(search);
+
+    const matchesStatus =
+      statusFilter === "all" || status === statusFilter.toLowerCase();
+
+    const matchesDate = !dateFilter || appointmentDate === dateFilter;
+
+    return matchesSearch && matchesStatus && matchesDate;
   });
+
+  const openEditModal = (appointment) => {
+    setEditingAppointment(appointment);
+
+    setEditForm({
+      date: formatInputDate(appointment.date),
+      time: formatTime(appointment.time),
+      treatmentType: appointment.treatment_type || "",
+      status: appointment.status || "scheduled",
+      notes: appointment.notes || "",
+    });
+
+    setError("");
+  };
+
+  const closeEditModal = () => {
+    setEditingAppointment(null);
+
+    setEditForm({
+      date: "",
+      time: "",
+      treatmentType: "",
+      status: "",
+      notes: "",
+    });
+  };
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+
+    setEditForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleUpdateAppointment = async (e) => {
+    e.preventDefault();
+
+    if (!editingAppointment?.id) return;
+
+    try {
+      await api.put(`/appointments/${editingAppointment.id}`, {
+        date: editForm.date,
+        time: editForm.time,
+        treatment_type: editForm.treatmentType,
+        treatmentType: editForm.treatmentType,
+        treatmentTypeId: editingAppointment.treatment_type_id || null,
+        status: editForm.status,
+        notes: editForm.notes,
+      });
+
+      setAppointments((prev) =>
+        prev.map((appointment) =>
+          appointment.id === editingAppointment.id
+            ? {
+                ...appointment,
+                date: editForm.date,
+                time: editForm.time,
+                treatment_type: editForm.treatmentType,
+                status: editForm.status,
+                notes: editForm.notes,
+              }
+            : appointment,
+        ),
+      );
+
+      closeEditModal();
+    } catch (error) {
+      console.log("Failed to update appointment", error);
+      setError(
+        error.response?.data?.message ||
+          error.response?.data?.error ||
+          "Failed to update appointment",
+      );
+    }
+  };
+
+  const clearFilters = () => {
+    setStatusFilter("all");
+    setDateFilter("");
+  };
 
   return (
     <div className={styles.page}>
@@ -99,11 +204,50 @@ function ManagerAppointments() {
                 />
               </div>
 
-              <button className={styles.filterBtn}>
+              <button
+                className={styles.filterBtn}
+                onClick={() => setShowFilters((prev) => !prev)}
+              >
                 <Filter size={17} />
                 Filter
               </button>
             </div>
+
+            {showFilters && (
+              <div className={styles.filterPanel}>
+                <div className={styles.filterField}>
+                  <label>Status</label>
+
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                  >
+                    <option value="all">All</option>
+                    <option value="scheduled">Scheduled</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+
+                <div className={styles.filterField}>
+                  <label>Date</label>
+
+                  <input
+                    type="date"
+                    value={dateFilter}
+                    onChange={(e) => setDateFilter(e.target.value)}
+                  />
+                </div>
+
+                <button
+                  className={styles.clearFilterBtn}
+                  onClick={clearFilters}
+                >
+                  Clear
+                </button>
+              </div>
+            )}
 
             {error && <div className={styles.errorBox}>{error}</div>}
 
@@ -141,19 +285,110 @@ function ManagerAppointments() {
 
                     <span
                       className={`${styles.status} ${
-                        styles[appointment.status] || ""
+                        styles[
+                          String(appointment.status || "").toLowerCase()
+                        ] || ""
                       }`}
                     >
                       {appointment.status}
                     </span>
 
-                    <button className={styles.editBtn}>Edit</button>
+                    <button
+                      className={styles.editBtn}
+                      onClick={() => openEditModal(appointment)}
+                    >
+                      Edit
+                    </button>
                   </div>
                 ))
               )}
             </div>
           </section>
         </section>
+
+        {editingAppointment && (
+          <div className={styles.modalOverlay}>
+            <form
+              className={styles.modalCard}
+              onSubmit={handleUpdateAppointment}
+            >
+              <div className={styles.modalHeader}>
+                <h2>Edit Appointment</h2>
+
+                <button type="button" onClick={closeEditModal}>
+                  ×
+                </button>
+              </div>
+
+              <div className={styles.formGrid}>
+                <label>
+                  Date
+                  <input
+                    type="date"
+                    name="date"
+                    value={editForm.date}
+                    onChange={handleEditChange}
+                    required
+                  />
+                </label>
+
+                <label>
+                  Time
+                  <input
+                    type="time"
+                    name="time"
+                    value={editForm.time}
+                    onChange={handleEditChange}
+                    required
+                  />
+                </label>
+
+                <label>
+                  Treatment
+                  <input
+                    type="text"
+                    name="treatmentType"
+                    value={editForm.treatmentType}
+                    onChange={handleEditChange}
+                  />
+                </label>
+
+                <label>
+                  Status
+                  <select
+                    name="status"
+                    value={editForm.status}
+                    onChange={handleEditChange}
+                    required
+                  >
+                    <option value="scheduled">Scheduled</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </label>
+
+                <label className={styles.fullField}>
+                  Notes
+                  <textarea
+                    name="notes"
+                    value={editForm.notes}
+                    onChange={handleEditChange}
+                    placeholder="Appointment notes..."
+                  />
+                </label>
+              </div>
+
+              <div className={styles.modalActions}>
+                <button type="button" onClick={closeEditModal}>
+                  Cancel
+                </button>
+
+                <button type="submit">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        )}
       </main>
     </div>
   );

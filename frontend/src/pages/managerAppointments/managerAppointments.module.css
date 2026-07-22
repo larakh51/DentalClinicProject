@@ -161,6 +161,59 @@
   background: #f8fafc;
 }
 
+.filterPanel {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 14px;
+  align-items: end;
+}
+
+.filterField {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.filterField label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.filterField input,
+.filterField select {
+  height: 38px;
+  border: 1px solid #dddddd;
+  border-radius: 8px;
+  padding: 0 11px;
+  outline: none;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  background: #ffffff;
+  color: #111827;
+}
+
+.clearFilterBtn {
+  height: 38px;
+  border: 1px solid #dddddd;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.clearFilterBtn:hover {
+  background: #f1f5f9;
+}
+
 .table {
   width: 100%;
 }
@@ -268,6 +321,122 @@
   font-weight: 600;
 }
 
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 20px;
+}
+
+.modalCard {
+  width: 100%;
+  max-width: 560px;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 22px;
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.22);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.modalHeader h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #111827;
+}
+
+.modalHeader button {
+  border: none;
+  background: transparent;
+  font-size: 26px;
+  cursor: pointer;
+  color: #64748b;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.formGrid label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.formGrid input,
+.formGrid select,
+.formGrid textarea {
+  border: 1px solid #dddddd;
+  border-radius: 8px;
+  padding: 0 11px;
+  outline: none;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+}
+
+.formGrid input,
+.formGrid select {
+  height: 38px;
+}
+
+.formGrid textarea {
+  min-height: 82px;
+  padding-top: 10px;
+  resize: vertical;
+}
+
+.formGrid input:focus,
+.formGrid select:focus,
+.formGrid textarea:focus {
+  border-color: #2563eb;
+}
+
+.fullField {
+  grid-column: 1 / -1;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.modalActions button {
+  height: 38px;
+  border-radius: 8px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.modalActions button:first-child {
+  border: 1px solid #dddddd;
+  background: #ffffff;
+  color: #111827;
+}
+
+.modalActions button:last-child {
+  border: none;
+  background: #030217;
+  color: #ffffff;
+}
+
 @media (max-width: 1000px) {
   .cardHeader {
     grid-template-columns: 1fr;
@@ -277,6 +446,10 @@
   .searchBox {
     width: 100%;
     min-width: 0;
+  }
+
+  .filterPanel {
+    grid-template-columns: 1fr;
   }
 
   .tableHead {
@@ -302,5 +475,9 @@
   .newBtn {
     width: 100%;
     justify-content: center;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
   }
 }
