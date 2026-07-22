@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Search, UserPlus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
@@ -8,6 +9,7 @@ import styles from "./managerPatients.module.css";
 
 function ManagerPatients() {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [patients, setPatients] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -132,7 +134,7 @@ function ManagerPatients() {
 
             <button
               className={styles.addBtn}
-              onClick={() => alert("Add patient page will be added later")}
+              onClick={() => navigate("/manager-patients/add")}
             >
               <UserPlus size={17} />
               Add Patient

@@ -26,6 +26,7 @@ import DoctorTreatments from "./pages/doctorTreatments/DoctorTreatments";
 import ManagerFinance from "./pages/managerFinance/ManagerFinance";
 import ManagerSettings from "./pages/managerSettings/ManagerSettings";
 import DoctorAvailability from "./pages/doctorAvailability/DoctorAvailability";
+import AddPatient from "./pages/addPatient/AddPatient";
 
 function App() {
   return (
@@ -194,6 +195,15 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["doctor"]}>
               <DoctorAvailability />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/manager-patients/add"
+          element={
+            <ProtectedRoute allowedRoles={["manager"]}>
+              <AddPatient />
             </ProtectedRoute>
           }
         />
