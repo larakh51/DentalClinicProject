@@ -25,38 +25,43 @@ function Payments() {
       try {
         const res = await api.get(`/invoices?patientId=${user.id}`);
         setInvoices(res.data || []);
+        setError("");
       } catch (err) {
         console.log("Failed to load invoices", err);
         setError("Failed to load invoices");
-
-        setInvoices([
-          {
-            id: "inv1",
-            date: "2026-02-15",
-            description: "Teeth Cleaning & Fluoride",
-            amount: 350,
-            status: "paid",
-          },
-          {
-            id: "inv2",
-            date: "2026-01-20",
-            description: "Composite Filling",
-            amount: 450,
-            status: "paid",
-          },
-        ]);
+        setInvoices([]);
       }
     };
 
     loadInvoices();
   }, [user]);
 
-  const paidInvoices = invoices.filter((invoice) => invoice.status === "paid");
-  const pendingInvoices = invoices.filter(
-    (invoice) => invoice.status === "pending",
+  const getInvoiceStatus = (invoice) => {
+    return String(invoice.status || "").toLowerCase();
+  };
+
+  const getInvoiceDescription = (invoice) => {
+    return (
+      invoice.description ||
+      invoice.treatment_description ||
+      invoice.treatment_type ||
+      invoice.notes ||
+      "Dental service"
+    );
+  };
+
+  const paidInvoices = invoices.filter(
+    (invoice) => getInvoiceStatus(invoice) === "paid",
   );
+
+  const pendingInvoices = invoices.filter((invoice) => {
+    const status = getInvoiceStatus(invoice);
+
+    return status === "pending" || status === "unpaid" || status === "partial";
+  });
+
   const overdueInvoices = invoices.filter(
-    (invoice) => invoice.status === "overdue",
+    (invoice) => getInvoiceStatus(invoice) === "overdue",
   );
 
   const totalPaid = paidInvoices.reduce((sum, invoice) => {
@@ -74,6 +79,36 @@ function Payments() {
   const formatDate = (date) => {
     if (!date) return "";
     return new Date(date).toLocaleDateString("en-GB");
+  };
+
+  const handleDownloadInvoice = (invoice) => {
+    const invoiceContent = `
+Dental Clinic Invoice
+
+Invoice ID: #${invoice.id}
+Patient: ${user?.firstName || ""} ${user?.lastName || ""}
+Date: ${formatDate(invoice.date)}
+Description: ${getInvoiceDescription(invoice)}
+Amount: ₪${invoice.amount}
+Status: ${invoice.status}
+
+Thank you for choosing Dental Clinic.
+`;
+
+    const blob = new Blob([invoiceContent], {
+      type: "text/plain;charset=utf-8",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `invoice-${invoice.id}.txt`;
+    document.body.appendChild(link);
+    link.click();
+
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -147,26 +182,32 @@ function Payments() {
               {invoices.length === 0 ? (
                 <div className={styles.empty}>No invoices found</div>
               ) : (
-                invoices.map((invoice) => (
-                  <div className={styles.tableRow} key={invoice.id}>
-                    <span className={styles.invoiceId}>#{invoice.id}</span>
-                    <span>{formatDate(invoice.date)}</span>
-                    <span>{invoice.description}</span>
-                    <span>₪{invoice.amount}</span>
+                invoices.map((invoice) => {
+                  const status = getInvoiceStatus(invoice);
 
-                    <span
-                      className={`${styles.status} ${
-                        styles[invoice.status] || ""
-                      }`}
-                    >
-                      {invoice.status}
-                    </span>
+                  return (
+                    <div className={styles.tableRow} key={invoice.id}>
+                      <span className={styles.invoiceId}>#{invoice.id}</span>
+                      <span>{formatDate(invoice.date)}</span>
+                      <span>{getInvoiceDescription(invoice)}</span>
+                      <span>₪{invoice.amount}</span>
 
-                    <button className={styles.downloadBtn}>
-                      <Download size={17} />
-                    </button>
-                  </div>
-                ))
+                      <span
+                        className={`${styles.status} ${styles[status] || ""}`}
+                      >
+                        {invoice.status}
+                      </span>
+
+                      <button
+                        type="button"
+                        className={styles.downloadBtn}
+                        onClick={() => handleDownloadInvoice(invoice)}
+                      >
+                        <Download size={17} />
+                      </button>
+                    </div>
+                  );
+                })
               )}
             </div>
           </section>
