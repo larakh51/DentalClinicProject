@@ -198,7 +198,9 @@
   color: #15803d;
 }
 
-.pending {
+.pending,
+.unpaid,
+.partial {
   background: #fff7ed;
   color: #d98200;
 }
