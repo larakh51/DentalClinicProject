@@ -9,32 +9,81 @@ import styles from "./bookAppointment.module.css";
 
 const TIME_SLOTS = [
   "09:00",
+  "09:10",
+  "09:20",
   "09:30",
+  "09:40",
+  "09:50",
   "10:00",
+  "10:10",
+  "10:20",
   "10:30",
+  "10:40",
+  "10:50",
   "11:00",
+  "11:10",
+  "11:20",
   "11:30",
+  "11:40",
+  "11:50",
   "12:00",
+  "12:10",
+  "12:20",
+  "12:30",
+  "12:40",
+  "12:50",
   "13:00",
+  "13:10",
+  "13:20",
   "13:30",
+  "13:40",
+  "13:50",
   "14:00",
+  "14:10",
+  "14:20",
   "14:30",
+  "14:40",
+  "14:50",
   "15:00",
+  "15:10",
+  "15:20",
+  "15:30",
+  "15:40",
+  "15:50",
   "16:00",
+  "16:10",
+  "16:20",
+  "16:30",
+  "16:40",
+  "16:50",
   "17:00",
+  "17:10",
+  "17:20",
+  "17:30",
+  "17:40",
+  "17:50",
   "18:00",
-  "19:00",
+  "18:10",
+  "18:20",
+  "18:30",
+  "18:40",
+  "18:50",
 ];
 
 function BookAppointment() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  const isPatient = user?.role === "patient";
+  const isManager = user?.role === "manager";
+  const isDoctor = user?.role === "doctor";
+
   const [doctors, setDoctors] = useState([]);
   const [treatmentTypes, setTreatmentTypes] = useState([]);
   const [bookedAppointments, setBookedAppointments] = useState([]);
 
   const [form, setForm] = useState({
+    patientIdNumber: "",
     treatmentTypeId: "",
     doctorId: "",
     date: "",
@@ -49,14 +98,26 @@ function BookAppointment() {
 
   const today = new Date().toISOString().split("T")[0];
 
-  const selectedDoctor = doctors.find((doctor) => doctor.id === form.doctorId);
+  const selectedDoctor = isDoctor
+    ? {
+        id: user?.id,
+        first_name: user?.firstName,
+        last_name: user?.lastName,
+      }
+    : doctors.find((doctor) => doctor.id === form.doctorId);
 
   const selectedTreatment = treatmentTypes.find(
     (treatment) => treatment.id === form.treatmentTypeId,
   );
 
+  const isPatientSelected = isPatient || Boolean(form.patientIdNumber.trim());
+
   const isFormComplete =
-    form.treatmentTypeId && form.doctorId && form.date && form.time;
+    isPatientSelected &&
+    form.treatmentTypeId &&
+    form.doctorId &&
+    form.date &&
+    form.time;
 
   const timeToMinutes = (time) => {
     if (!time) return 0;
@@ -168,6 +229,7 @@ function BookAppointment() {
         ]);
 
         setDoctors(Array.isArray(doctorsRes.data) ? doctorsRes.data : []);
+
         setTreatmentTypes(
           Array.isArray(treatmentTypesRes.data) ? treatmentTypesRes.data : [],
         );
@@ -189,6 +251,15 @@ function BookAppointment() {
 
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (!isDoctor || !user?.id) return;
+
+    setForm((prev) => ({
+      ...prev,
+      doctorId: user.id,
+    }));
+  }, [isDoctor, user?.id]);
 
   useEffect(() => {
     const loadBookedAppointments = async () => {
@@ -259,6 +330,20 @@ function BookAppointment() {
     return ` - ₪${numericPrice}`;
   };
 
+  const getCancelPath = () => {
+    if (isManager) return "/manager-appointments";
+    if (isDoctor) return "/doctor-schedule";
+
+    return "/patient-dashboard";
+  };
+
+  const getSuccessPath = () => {
+    if (isManager) return "/manager-appointments";
+    if (isDoctor) return "/doctor-schedule";
+
+    return "/my-appointments";
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -267,6 +352,11 @@ function BookAppointment() {
 
     if (!user?.id) {
       setError("You must be logged in to book an appointment");
+      return;
+    }
+
+    if (!isPatient && !form.patientIdNumber.trim()) {
+      setError("Please enter the patient ID number");
       return;
     }
 
@@ -291,9 +381,25 @@ function BookAppointment() {
     }
 
     try {
+      let appointmentPatient = {
+        id: user.id,
+        first_name: user.firstName,
+        last_name: user.lastName,
+      };
+
+      if (!isPatient) {
+        const patientRes = await api.get(
+          `/users/patient-by-id-number/${encodeURIComponent(
+            form.patientIdNumber.trim(),
+          )}`,
+        );
+
+        appointmentPatient = patientRes.data;
+      }
+
       await api.post("/appointments", {
-        patientId: user.id,
-        patientName: `${user.firstName} ${user.lastName}`,
+        patientId: appointmentPatient.id,
+        patientName: `${appointmentPatient.first_name} ${appointmentPatient.last_name}`,
         doctorId: form.doctorId,
         doctorName: `Dr. ${selectedDoctor.first_name} ${selectedDoctor.last_name}`,
         date: form.date,
@@ -305,8 +411,9 @@ function BookAppointment() {
       setSuccess("Appointment booked successfully");
 
       setForm({
+        patientIdNumber: "",
         treatmentTypeId: "",
-        doctorId: "",
+        doctorId: isDoctor ? user.id : "",
         date: "",
         time: "",
         notes: "",
@@ -315,7 +422,7 @@ function BookAppointment() {
       setBookedAppointments([]);
 
       setTimeout(() => {
-        navigate("/my-appointments");
+        navigate(getSuccessPath());
       }, 1000);
     } catch (err) {
       console.log("BOOK APPOINTMENT ERROR:", err.response?.data || err);
@@ -344,6 +451,14 @@ function BookAppointment() {
           <div className={styles.pageHeader}>
             <h1>Book Appointment</h1>
             <p>Schedule your next dental visit</p>
+
+            <button
+              type="button"
+              className={styles.backBtn}
+              onClick={() => navigate(-1)}
+            >
+              Back to My Schedule
+            </button>
           </div>
 
           <section className={styles.formCard}>
@@ -367,6 +482,21 @@ function BookAppointment() {
             )}
 
             <form onSubmit={handleSubmit} className={styles.form}>
+              {!isPatient && (
+                <div className={styles.field}>
+                  <label>Patient ID Number *</label>
+
+                  <input
+                    type="text"
+                    name="patientIdNumber"
+                    value={form.patientIdNumber}
+                    onChange={handleChange}
+                    placeholder="Enter patient ID number"
+                    required
+                  />
+                </div>
+              )}
+
               <div className={styles.field}>
                 <label>Treatment Type *</label>
 
@@ -392,25 +522,27 @@ function BookAppointment() {
                 </select>
               </div>
 
-              <div className={styles.field}>
-                <label>Select Doctor *</label>
+              {!isDoctor && (
+                <div className={styles.field}>
+                  <label>Select Doctor *</label>
 
-                <select
-                  name="doctorId"
-                  value={form.doctorId}
-                  onChange={handleChange}
-                  required
-                  disabled={loadingData}
-                >
-                  <option value="">Choose your preferred doctor</option>
+                  <select
+                    name="doctorId"
+                    value={form.doctorId}
+                    onChange={handleChange}
+                    required
+                    disabled={loadingData}
+                  >
+                    <option value="">Choose your preferred doctor</option>
 
-                  {doctors.map((doctor) => (
-                    <option key={doctor.id} value={doctor.id}>
-                      Dr. {doctor.first_name} {doctor.last_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                    {doctors.map((doctor) => (
+                      <option key={doctor.id} value={doctor.id}>
+                        Dr. {doctor.first_name} {doctor.last_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className={styles.field}>
                 <label>Select Date *</label>
@@ -516,7 +648,7 @@ function BookAppointment() {
                 <button
                   type="button"
                   className={styles.cancelBtn}
-                  onClick={() => navigate("/patient-dashboard")}
+                  onClick={() => navigate(getCancelPath())}
                 >
                   Cancel
                 </button>
@@ -524,16 +656,18 @@ function BookAppointment() {
             </form>
           </section>
 
-          <section className={styles.infoCard}>
-            <h3>📌 Important:</h3>
+          {isPatient && (
+            <section className={styles.infoCard}>
+              <h3>📌 Important:</h3>
 
-            <ul>
-              <li>Please arrive 10 minutes before your appointment</li>
-              <li>Bring your insurance card and ID</li>
-              <li>Cancel at least 24 hours in advance to avoid fees</li>
-              <li>You will receive a confirmation SMS and email</li>
-            </ul>
-          </section>
+              <ul>
+                <li>Please arrive 10 minutes before your appointment</li>
+                <li>Bring your insurance card and ID</li>
+                <li>Cancel at least 24 hours in advance to avoid fees</li>
+                <li>You will receive a confirmation SMS and email</li>
+              </ul>
+            </section>
+          )}
         </section>
       </main>
     </div>

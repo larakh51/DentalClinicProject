@@ -193,25 +193,6 @@ function Profile() {
     }
   };
 
-  const handleToggleTwoFactor = () => {
-    setError("");
-    setSuccess("");
-
-    const nextValue = !twoFactorEnabled;
-
-    setTwoFactorEnabled(nextValue);
-
-    if (user?.id) {
-      localStorage.setItem(`twoFactor-${user.id}`, String(nextValue));
-    }
-
-    setSuccess(
-      nextValue
-        ? "Two-factor authentication enabled"
-        : "Two-factor authentication disabled",
-    );
-  };
-
   const handleDeleteAccount = async () => {
     setError("");
     setSuccess("");
@@ -414,21 +395,6 @@ function Profile() {
                 onClick={openPasswordModal}
               >
                 Change Password
-              </button>
-            </div>
-
-            <div className={styles.securityItem}>
-              <div>
-                <h3>Two-Factor Authentication</h3>
-                <p>{twoFactorEnabled ? "Enabled" : "Not enabled"}</p>
-              </div>
-
-              <button
-                type="button"
-                className={styles.outlineBtn}
-                onClick={handleToggleTwoFactor}
-              >
-                {twoFactorEnabled ? "Disable" : "Enable"}
               </button>
             </div>
           </section>

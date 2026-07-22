@@ -4,6 +4,7 @@ const router = express.Router();
 const {
   getUsers,
   getDoctors,
+  getPatientByIdNumber,
   getPatientsForDoctor,
   createEmployee,
   getUserById,
@@ -16,6 +17,14 @@ const { protect, allowRoles } = require("../middleWares/authMiddleware");
 
 router.get("/", protect, allowRoles("manager"), getUsers);
 router.get("/doctors", getDoctors);
+
+router.get(
+  "/patient-by-id-number/:idNumber",
+  protect,
+  allowRoles("manager", "doctor"),
+  getPatientByIdNumber,
+);
+
 router.get("/patients", getPatientsForDoctor);
 router.post("/employees", protect, allowRoles("manager"), createEmployee);
 

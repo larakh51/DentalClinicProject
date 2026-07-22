@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { CalendarDays } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
@@ -8,6 +9,7 @@ import styles from "./doctorSchedule.module.css";
 
 function DoctorSchedule() {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [appointments, setAppointments] = useState([]);
   const [viewMode, setViewMode] = useState("calendar");
@@ -139,9 +141,20 @@ function DoctorSchedule() {
         </header>
 
         <section className={styles.content}>
-          <div className={styles.pageHeader}>
-            <h1>My Schedule</h1>
-            <p>View your appointment calendar</p>
+          <div className={styles.headerRow}>
+            <div className={styles.pageHeader}>
+              <h1>My Schedule</h1>
+              <p>View your appointment calendar</p>
+            </div>
+
+            <button
+              type="button"
+              className={styles.newBtn}
+              onClick={() => navigate("/doctor-book-appointment")}
+            >
+              <CalendarDays size={17} />
+              New Appointment
+            </button>
           </div>
 
           <div className={styles.tabs}>

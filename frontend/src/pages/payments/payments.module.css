@@ -121,8 +121,7 @@
   color: #ef4444;
 }
 
-.card,
-.methodsCard {
+.card {
   background: #ffffff;
   border: 1px solid #dddddd;
   border-radius: 14px;
@@ -134,8 +133,7 @@
   margin-bottom: 26px;
 }
 
-.cardHeader h2,
-.methodsCard h2 {
+.cardHeader h2 {
   margin: 0;
   color: #111827;
   font-size: 17px;
@@ -227,25 +225,6 @@
   background: #f8fafc;
 }
 
-.methodsCard h2 {
-  margin-bottom: 30px;
-}
-
-.methods {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  flex-wrap: wrap;
-}
-
-.methods div {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #27405f;
-  font-size: 14px;
-}
-
 .empty {
   padding: 28px 8px;
   color: #64748b;
@@ -281,10 +260,5 @@
 @media (max-width: 650px) {
   .content {
     padding: 24px 16px;
-  }
-
-  .methods {
-    flex-direction: column;
-    align-items: flex-start;
   }
 }

@@ -37,6 +37,52 @@ const getDoctors = async (req, res) => {
   }
 };
 
+const getPatientByIdNumber = async (req, res) => {
+  try {
+    const { idNumber } = req.params;
+
+    if (!idNumber) {
+      return res.status(400).json({
+        message: "Patient ID number is required",
+      });
+    }
+
+    const [patients] = await pool.query(
+      `SELECT
+         id,
+         email,
+         role,
+         first_name,
+         last_name,
+         phone,
+         birth_date,
+         id_number,
+         avatar,
+         status
+       FROM users
+       WHERE id_number = ?
+         AND role = 'patient'
+         AND status = 'active'`,
+      [idNumber],
+    );
+
+    if (patients.length === 0) {
+      return res.status(404).json({
+        message: "Patient not found with this ID number",
+      });
+    }
+
+    res.json(patients[0]);
+  } catch (error) {
+    console.error("GET PATIENT BY ID NUMBER ERROR:", error);
+
+    res.status(500).json({
+      message: "Failed to get patient",
+      error: error.sqlMessage || error.message,
+    });
+  }
+};
+
 const getPatientsForDoctor = async (req, res) => {
   try {
     const { doctorId } = req.query;
@@ -422,4 +468,5 @@ module.exports = {
   updateUser,
   changePassword,
   deleteUser,
+  getPatientByIdNumber,
 };
