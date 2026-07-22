@@ -393,7 +393,9 @@
   background-image:
     linear-gradient(#e5e7eb 1px, transparent 1px),
     linear-gradient(90deg, #e5e7eb 1px, transparent 1px);
-  background-size: 100% 45px, 25% 100%;
+  background-size:
+    100% 45px,
+    25% 100%;
   padding: 0 22px;
 }
 
@@ -530,6 +532,103 @@
   font-size: 14px;
 }
 
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 20px;
+}
+
+.modalCard {
+  width: 100%;
+  max-width: 620px;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 22px;
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.22);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modalHeader h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #111827;
+}
+
+.modalHeader p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.closeBtn {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 27px;
+  line-height: 27px;
+  cursor: pointer;
+}
+
+.closeBtn:hover {
+  color: #111827;
+}
+
+.detailsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.detailItem {
+  min-height: 78px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.detailLabel {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.detailItem p {
+  margin: 0;
+  color: #111827;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.fullDetail {
+  grid-column: 1 / -1;
+}
+
+.notesText {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-weight: 400 !important;
+  line-height: 1.6;
+}
+
 @media (max-width: 1150px) {
   .statsGrid {
     grid-template-columns: repeat(2, 1fr);
@@ -568,5 +667,17 @@
   .donutWrap {
     flex-direction: column;
     gap: 24px;
+  }
+
+  .modalCard {
+    padding: 18px;
+  }
+
+  .detailsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .fullDetail {
+    grid-column: auto;
   }
 }
