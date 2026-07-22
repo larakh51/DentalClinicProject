@@ -13,6 +13,12 @@ function ManagerPatients() {
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState("");
 
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [patientDetails, setPatientDetails] = useState(null);
+  const [medicalRecord, setMedicalRecord] = useState(null);
+  const [patientAppointments, setPatientAppointments] = useState([]);
+  const [viewLoading, setViewLoading] = useState(false);
+
   useEffect(() => {
     const loadPatients = async () => {
       try {
@@ -46,6 +52,64 @@ function ManagerPatients() {
       phone.includes(search)
     );
   });
+
+  const formatDate = (date) => {
+    if (!date) return "Not provided";
+
+    return new Date(date).toLocaleDateString("en-GB");
+  };
+
+  const formatTime = (time) => {
+    if (!time) return "";
+    return String(time).slice(0, 5);
+  };
+
+  const openPatientView = async (patient) => {
+    setSelectedPatient(patient);
+    setPatientDetails(patient);
+    setMedicalRecord(null);
+    setPatientAppointments([]);
+    setViewLoading(true);
+    setError("");
+
+    try {
+      const [userResult, medicalResult, appointmentsResult] =
+        await Promise.allSettled([
+          api.get(`/users/${patient.id}`),
+          api.get(`/medical-records/patient/${patient.id}`),
+          api.get(`/appointments?patientId=${patient.id}`),
+        ]);
+
+      if (userResult.status === "fulfilled") {
+        setPatientDetails(userResult.value.data || patient);
+      }
+
+      if (medicalResult.status === "fulfilled") {
+        setMedicalRecord(medicalResult.value.data?.medicalRecord || null);
+      }
+
+      if (appointmentsResult.status === "fulfilled") {
+        setPatientAppointments(
+          Array.isArray(appointmentsResult.value.data)
+            ? appointmentsResult.value.data
+            : [],
+        );
+      }
+    } catch (err) {
+      console.log("Failed to load patient details", err);
+      setError("Failed to load patient details");
+    } finally {
+      setViewLoading(false);
+    }
+  };
+
+  const closePatientView = () => {
+    setSelectedPatient(null);
+    setPatientDetails(null);
+    setMedicalRecord(null);
+    setPatientAppointments([]);
+    setViewLoading(false);
+  };
 
   return (
     <div className={styles.page}>
@@ -83,6 +147,7 @@ function ManagerPatients() {
 
             <div className={styles.searchBox}>
               <Search size={19} />
+
               <input
                 type="text"
                 placeholder="Search patients..."
@@ -120,13 +185,151 @@ function ManagerPatients() {
 
                     <span>{patient.phone || "Not provided"}</span>
 
-                    <button className={styles.viewBtn}>View</button>
+                    <button
+                      type="button"
+                      className={styles.viewBtn}
+                      onClick={() => openPatientView(patient)}
+                    >
+                      View
+                    </button>
                   </div>
                 ))
               )}
             </div>
           </section>
         </section>
+
+        {selectedPatient && (
+          <div className={styles.modalOverlay}>
+            <div className={styles.modalCard}>
+              <div className={styles.modalHeader}>
+                <h2>Patient Details</h2>
+
+                <button type="button" onClick={closePatientView}>
+                  ×
+                </button>
+              </div>
+
+              {viewLoading ? (
+                <div className={styles.emptyBox}>
+                  Loading patient details...
+                </div>
+              ) : (
+                <>
+                  <div className={styles.patientModalHeader}>
+                    <div className={styles.modalAvatar}>
+                      {getInitials(patientDetails || selectedPatient)}
+                    </div>
+
+                    <div>
+                      <h3>
+                        {patientDetails?.first_name} {patientDetails?.last_name}
+                      </h3>
+                      <p>{patientDetails?.email}</p>
+                    </div>
+                  </div>
+
+                  <div className={styles.detailsGrid}>
+                    <div className={styles.detailItem}>
+                      <span>Patient ID</span>
+                      <strong>{patientDetails?.id}</strong>
+                    </div>
+
+                    <div className={styles.detailItem}>
+                      <span>ID Number</span>
+                      <strong>
+                        {patientDetails?.id_number || "Not provided"}
+                      </strong>
+                    </div>
+
+                    <div className={styles.detailItem}>
+                      <span>Phone</span>
+                      <strong>{patientDetails?.phone || "Not provided"}</strong>
+                    </div>
+
+                    <div className={styles.detailItem}>
+                      <span>Birth Date</span>
+                      <strong>{formatDate(patientDetails?.birth_date)}</strong>
+                    </div>
+                  </div>
+
+                  <div className={styles.recordSection}>
+                    <h3>Medical Information</h3>
+
+                    <div className={styles.medicalItem}>
+                      <span>Allergies</span>
+                      <p>{medicalRecord?.allergies || "None reported"}</p>
+                    </div>
+
+                    <div className={styles.medicalItem}>
+                      <span>Chronic Diseases</span>
+                      <p>
+                        {medicalRecord?.chronic_diseases || "None reported"}
+                      </p>
+                    </div>
+
+                    <div className={styles.medicalItem}>
+                      <span>Notes</span>
+                      <p>{medicalRecord?.notes || "No notes"}</p>
+                    </div>
+                  </div>
+
+                  <div className={styles.appointmentsSection}>
+                    <h3>Recent Appointments</h3>
+
+                    {patientAppointments.length === 0 ? (
+                      <div className={styles.emptyAppointments}>
+                        No appointments found
+                      </div>
+                    ) : (
+                      <div className={styles.appointmentsList}>
+                        {patientAppointments.slice(0, 5).map((appointment) => (
+                          <div
+                            className={styles.appointmentItem}
+                            key={appointment.id}
+                          >
+                            <div>
+                              <strong>{formatDate(appointment.date)}</strong>
+
+                              <p>
+                                {formatTime(appointment.time)} ·{" "}
+                                {appointment.doctor_name || "Unknown doctor"}
+                              </p>
+                            </div>
+
+                            <div className={styles.appointmentRight}>
+                              <span>
+                                {appointment.treatment_type || "Not provided"}
+                              </span>
+
+                              <small
+                                className={`${styles.modalStatus} ${
+                                  styles[
+                                    String(
+                                      appointment.status || "",
+                                    ).toLowerCase()
+                                  ] || ""
+                                }`}
+                              >
+                                {appointment.status}
+                              </small>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className={styles.modalActions}>
+                    <button type="button" onClick={closePatientView}>
+                      Close
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
