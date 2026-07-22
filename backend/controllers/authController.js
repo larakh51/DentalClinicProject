@@ -33,6 +33,7 @@ const login = async (req, res) => {
       firstName: user.first_name,
       lastName: user.last_name,
       phone: user.phone,
+      avatar: user.avatar,
     };
 
     req.session.save((error) => {
@@ -123,7 +124,7 @@ const getMe = async (req, res) => {
     }
 
     const [users] = await pool.query(
-      `SELECT id, email, role, first_name, last_name, phone
+      `SELECT id, email, role, first_name, last_name, phone, avatar
        FROM users
        WHERE id = ?`,
       [req.session.user.id],
@@ -144,6 +145,7 @@ const getMe = async (req, res) => {
       firstName: user.first_name,
       lastName: user.last_name,
       phone: user.phone,
+      avatar: user.avatar,
     };
 
     req.session.user = currentUser;
