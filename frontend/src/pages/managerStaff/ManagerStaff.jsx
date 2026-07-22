@@ -12,6 +12,17 @@ function ManagerStaff() {
 
   const [staff, setStaff] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [editingEmployee, setEditingEmployee] = useState(null);
+  const [editForm, setEditForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    role: "",
+  });
+  const [scheduleDoctor, setScheduleDoctor] = useState(null);
+  const [doctorAppointments, setDoctorAppointments] = useState([]);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
@@ -60,6 +71,107 @@ function ManagerStaff() {
     const first = employee.first_name?.[0] || "";
     const last = employee.last_name?.[0] || "";
     return `${first}${last}`;
+  };
+
+  const openEditModal = (employee) => {
+    setEditingEmployee(employee);
+
+    setEditForm({
+      firstName: employee.first_name || "",
+      lastName: employee.last_name || "",
+      email: employee.email || "",
+      phone: employee.phone || "",
+      role: employee.role || "",
+    });
+  };
+
+  const closeEditModal = () => {
+    setEditingEmployee(null);
+
+    setEditForm({
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      role: "",
+    });
+  };
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+
+    setEditForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleUpdateEmployee = async (e) => {
+    e.preventDefault();
+
+    if (!editingEmployee?.id) return;
+
+    try {
+      await api.put(`/users/${editingEmployee.id}`, editForm);
+
+      setStaff((prev) =>
+        prev.map((employee) =>
+          employee.id === editingEmployee.id
+            ? {
+                ...employee,
+                first_name: editForm.firstName,
+                last_name: editForm.lastName,
+                email: editForm.email,
+                phone: editForm.phone,
+                role: editForm.role,
+              }
+            : employee,
+        ),
+      );
+
+      closeEditModal();
+    } catch (err) {
+      console.log("Failed to update employee", err);
+
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Failed to update employee",
+      );
+    }
+  };
+
+  const openScheduleModal = async (doctor) => {
+    setScheduleDoctor(doctor);
+    setDoctorAppointments([]);
+    setScheduleLoading(true);
+
+    try {
+      const res = await api.get(`/appointments?doctorId=${doctor.id}`);
+      setDoctorAppointments(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.log("Failed to load doctor schedule", err);
+      setError("Failed to load doctor schedule");
+      setDoctorAppointments([]);
+    } finally {
+      setScheduleLoading(false);
+    }
+  };
+
+  const closeScheduleModal = () => {
+    setScheduleDoctor(null);
+    setDoctorAppointments([]);
+    setScheduleLoading(false);
+  };
+
+  const formatDate = (date) => {
+    if (!date) return "";
+    return new Date(date).toLocaleDateString("en-GB");
+  };
+
+  const formatTime = (time) => {
+    if (!time) return "";
+    return String(time).slice(0, 5);
   };
 
   return (
@@ -145,8 +257,17 @@ function ManagerStaff() {
                     </div>
 
                     <div className={styles.actions}>
-                      <button className={styles.editBtn}>Edit</button>
-                      <button className={styles.scheduleBtn}>
+                      <button
+                        className={styles.editBtn}
+                        onClick={() => openEditModal(doctor)}
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        className={styles.scheduleBtn}
+                        onClick={() => openScheduleModal(doctor)}
+                      >
                         View Schedule
                       </button>
                     </div>
@@ -183,13 +304,154 @@ function ManagerStaff() {
                       </div>
                     </div>
 
-                    <button className={styles.smallEditBtn}>Edit</button>
+                    <button
+                      className={styles.smallEditBtn}
+                      onClick={() => openEditModal(manager)}
+                    >
+                      Edit
+                    </button>
                   </div>
                 ))}
               </div>
             )}
           </section>
         </section>
+
+        {editingEmployee && (
+          <div className={styles.modalOverlay}>
+            <form className={styles.modalCard} onSubmit={handleUpdateEmployee}>
+              <div className={styles.modalHeader}>
+                <h2>Edit Employee</h2>
+
+                <button type="button" onClick={closeEditModal}>
+                  ×
+                </button>
+              </div>
+
+              <div className={styles.formGrid}>
+                <label>
+                  First Name
+                  <input
+                    type="text"
+                    name="firstName"
+                    value={editForm.firstName}
+                    onChange={handleEditChange}
+                    required
+                  />
+                </label>
+
+                <label>
+                  Last Name
+                  <input
+                    type="text"
+                    name="lastName"
+                    value={editForm.lastName}
+                    onChange={handleEditChange}
+                    required
+                  />
+                </label>
+
+                <label>
+                  Email
+                  <input
+                    type="email"
+                    name="email"
+                    value={editForm.email}
+                    onChange={handleEditChange}
+                    required
+                  />
+                </label>
+
+                <label>
+                  Phone
+                  <input
+                    type="text"
+                    name="phone"
+                    value={editForm.phone}
+                    onChange={handleEditChange}
+                  />
+                </label>
+
+                <label>
+                  Role
+                  <select
+                    name="role"
+                    value={editForm.role}
+                    onChange={handleEditChange}
+                    required
+                  >
+                    <option value="doctor">Doctor</option>
+                    <option value="manager">Manager</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className={styles.modalActions}>
+                <button type="button" onClick={closeEditModal}>
+                  Cancel
+                </button>
+
+                <button type="submit">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {scheduleDoctor && (
+          <div className={styles.modalOverlay}>
+            <div className={styles.scheduleModalCard}>
+              <div className={styles.modalHeader}>
+                <h2>
+                  Dr. {scheduleDoctor.first_name} {scheduleDoctor.last_name}{" "}
+                  Schedule
+                </h2>
+
+                <button type="button" onClick={closeScheduleModal}>
+                  ×
+                </button>
+              </div>
+
+              {scheduleLoading ? (
+                <div className={styles.emptyBox}>Loading schedule...</div>
+              ) : doctorAppointments.length === 0 ? (
+                <div className={styles.emptyBox}>No appointments found</div>
+              ) : (
+                <div className={styles.scheduleTable}>
+                  <div className={styles.scheduleTableHead}>
+                    <span>Date</span>
+                    <span>Time</span>
+                    <span>Patient</span>
+                    <span>Treatment</span>
+                    <span>Status</span>
+                  </div>
+
+                  {doctorAppointments.map((appointment) => (
+                    <div
+                      className={styles.scheduleTableRow}
+                      key={appointment.id}
+                    >
+                      <span>{formatDate(appointment.date)}</span>
+                      <span>{formatTime(appointment.time)}</span>
+                      <span>
+                        {appointment.patient_name || "Unknown patient"}
+                      </span>
+                      <span>
+                        {appointment.treatment_type || "Not provided"}
+                      </span>
+                      <span
+                        className={`${styles.scheduleStatus} ${
+                          styles[appointment.status] || ""
+                        }`}
+                      >
+                        {appointment.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

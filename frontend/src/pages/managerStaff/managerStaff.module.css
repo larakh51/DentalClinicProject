@@ -292,6 +292,106 @@
   font-weight: 600;
 }
 
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 20px;
+}
+
+.modalCard {
+  width: 100%;
+  max-width: 520px;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 22px;
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.22);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.modalHeader h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #111827;
+}
+
+.modalHeader button {
+  border: none;
+  background: transparent;
+  font-size: 26px;
+  cursor: pointer;
+  color: #64748b;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.formGrid label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.formGrid input,
+.formGrid select {
+  height: 38px;
+  border: 1px solid #dddddd;
+  border-radius: 8px;
+  padding: 0 11px;
+  outline: none;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+}
+
+.formGrid input:focus,
+.formGrid select:focus {
+  border-color: #2563eb;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.modalActions button {
+  height: 38px;
+  border-radius: 8px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.modalActions button:first-child {
+  border: 1px solid #dddddd;
+  background: #ffffff;
+  color: #111827;
+}
+
+.modalActions button:last-child {
+  border: none;
+  background: #030217;
+  color: #ffffff;
+}
+
 @media (max-width: 950px) {
   .doctorsGrid {
     grid-template-columns: 1fr;
@@ -320,5 +420,132 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 14px;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .scheduleModalCard {
+    width: 100%;
+    max-width: 820px;
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 22px;
+    box-shadow: 0 14px 40px rgba(15, 23, 42, 0.22);
+  }
+
+  .scheduleTable {
+    width: 100%;
+  }
+
+  .scheduleTableHead,
+  .scheduleTableRow {
+    display: grid;
+    grid-template-columns: 1fr 0.8fr 1.5fr 1.5fr 1fr;
+    align-items: center;
+    column-gap: 14px;
+  }
+
+  .scheduleTableHead {
+    padding: 0 8px 14px;
+    border-bottom: 1px solid #e5e7eb;
+    color: #111827;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .scheduleTableRow {
+    min-height: 46px;
+    padding: 0 8px;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+    color: #111827;
+  }
+
+  .scheduleTableRow:last-child {
+    border-bottom: none;
+  }
+
+  .scheduleStatus {
+    width: fit-content;
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: lowercase;
+  }
+
+  @media (max-width: 650px) {
+    .scheduleTableHead {
+      display: none;
+    }
+
+    .scheduleTableRow {
+      grid-template-columns: 1fr;
+      gap: 8px;
+      padding: 14px 8px;
+    }
+  }
+}
+.scheduleModalCard {
+  width: 100%;
+  max-width: 820px;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 22px;
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.22);
+}
+
+.scheduleTable {
+  width: 100%;
+}
+
+.scheduleTableHead,
+.scheduleTableRow {
+  display: grid;
+  grid-template-columns: 1fr 0.8fr 1.5fr 1.5fr 1fr;
+  align-items: center;
+  column-gap: 14px;
+}
+
+.scheduleTableHead {
+  padding: 0 8px 14px;
+  border-bottom: 1px solid #e5e7eb;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.scheduleTableRow {
+  min-height: 46px;
+  padding: 0 8px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 14px;
+  color: #111827;
+}
+
+.scheduleTableRow:last-child {
+  border-bottom: none;
+}
+
+.scheduleStatus {
+  width: fit-content;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: lowercase;
+}
+
+@media (max-width: 650px) {
+  .scheduleTableHead {
+    display: none;
+  }
+
+  .scheduleTableRow {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 14px 8px;
   }
 }
