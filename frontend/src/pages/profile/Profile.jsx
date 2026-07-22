@@ -44,8 +44,9 @@ function Profile() {
       phone: user?.phone || "",
     });
 
-    setAvatarPreview(user?.avatar || "");
-
+    if (user?.avatar) {
+      setAvatarPreview(user.avatar);
+    }
     if (user?.id) {
       const savedTwoFactor = localStorage.getItem(`twoFactor-${user.id}`);
       setTwoFactorEnabled(savedTwoFactor === "true");
@@ -128,6 +129,8 @@ function Profile() {
         });
 
         await checkAuth();
+
+        setAvatarPreview(avatar);
 
         setSuccess("Avatar updated successfully");
       } catch (err) {
