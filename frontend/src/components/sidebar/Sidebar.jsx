@@ -12,6 +12,7 @@ import {
   BarChart3,
   Settings,
   CalendarDays,
+  UserPlus,
 } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
@@ -102,6 +103,11 @@ function Sidebar() {
       to: "/manager-patients",
       label: "Patients",
       icon: <UsersRound size={20} />,
+    },
+    {
+      to: "/manager-patients/add",
+      label: "Add Patient",
+      icon: <UserPlus size={20} />,
     },
     {
       to: "/manager-staff",
