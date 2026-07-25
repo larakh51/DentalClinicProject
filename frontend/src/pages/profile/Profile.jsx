@@ -17,6 +17,7 @@ function Profile() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [passwordChangedAt, setPasswordChangedAt] = useState(null);
 
   const [form, setForm] = useState({
     firstName: user?.firstName || "",
@@ -47,11 +48,31 @@ function Profile() {
     if (user?.avatar) {
       setAvatarPreview(user.avatar);
     }
+
     if (user?.id) {
       const savedTwoFactor = localStorage.getItem(`twoFactor-${user.id}`);
       setTwoFactorEnabled(savedTwoFactor === "true");
     }
   }, [user]);
+
+  useEffect(() => {
+    const loadPasswordChangedAt = async () => {
+      if (!user?.id) return;
+
+      try {
+        const res = await api.get(`/users/${user.id}`);
+
+        setPasswordChangedAt(res.data?.password_changed_at || null);
+      } catch (err) {
+        console.log(
+          "Failed to load password change date",
+          err.response?.data || err,
+        );
+      }
+    };
+
+    loadPasswordChangedAt();
+  }, [user?.id]);
 
   const handleChange = (e) => {
     setForm({
@@ -153,6 +174,7 @@ function Profile() {
 
   const closePasswordModal = () => {
     setShowPasswordModal(false);
+
     setPasswordForm({
       currentPassword: "",
       newPassword: "",
@@ -177,10 +199,14 @@ function Profile() {
     }
 
     try {
-      await api.put(`/users/${user.id}/password`, {
+      const res = await api.put(`/users/${user.id}/password`, {
         currentPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword,
       });
+
+      setPasswordChangedAt(
+        res.data?.passwordChangedAt || new Date().toISOString(),
+      );
 
       closePasswordModal();
       setSuccess("Password changed successfully");
@@ -211,6 +237,20 @@ function Profile() {
 
       setShowDeleteModal(false);
     }
+  };
+
+  const formatPasswordChangedAt = (date) => {
+    if (!date) {
+      return "Password has not been changed yet";
+    }
+
+    return `Last changed on ${new Date(date).toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })}`;
   };
 
   return (
@@ -255,6 +295,7 @@ function Profile() {
               <h2>
                 {user?.firstName} {user?.lastName}
               </h2>
+
               <p>{user?.email}</p>
 
               <input
@@ -320,6 +361,7 @@ function Profile() {
 
                 <div className={styles.inputBox}>
                   <UserRound size={17} />
+
                   <input
                     name="firstName"
                     value={form.firstName}
@@ -334,6 +376,7 @@ function Profile() {
 
                 <div className={styles.inputBox}>
                   <UserRound size={17} />
+
                   <input
                     name="lastName"
                     value={form.lastName}
@@ -349,6 +392,7 @@ function Profile() {
 
               <div className={styles.inputBox}>
                 <Mail size={17} />
+
                 <input
                   name="email"
                   value={form.email}
@@ -363,6 +407,7 @@ function Profile() {
 
               <div className={styles.inputBox}>
                 <Phone size={17} />
+
                 <input
                   name="phone"
                   value={form.phone}
@@ -377,6 +422,7 @@ function Profile() {
           <section className={styles.card}>
             <div className={styles.securityHeader}>
               <Lock size={23} />
+
               <div>
                 <h2>Security</h2>
                 <p>Manage your password and security settings</p>
@@ -386,7 +432,7 @@ function Profile() {
             <div className={styles.securityItem}>
               <div>
                 <h3>Password</h3>
-                <p>Last changed 3 months ago</p>
+                <p>{formatPasswordChangedAt(passwordChangedAt)}</p>
               </div>
 
               <button

@@ -225,6 +225,33 @@
   font-size: 14px;
 }
 
+.appointmentCount {
+  min-height: 42px;
+  border: 1px solid #e5e7eb;
+  border-radius: 9px;
+  background: #f8fafc;
+  padding: 0 12px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.appointmentCount div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #52617a;
+  font-size: 14px;
+}
+
+.appointmentCount strong {
+  color: #111827;
+  font-size: 17px;
+  font-weight: 700;
+}
+
 .actions {
   display: grid;
   grid-template-columns: 1fr 130px;
@@ -392,102 +419,6 @@
   color: #ffffff;
 }
 
-@media (max-width: 950px) {
-  .doctorsGrid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 650px) {
-  .content {
-    padding: 24px 16px;
-  }
-
-  .headerRow {
-    flex-direction: column;
-  }
-
-  .addBtn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .actions {
-    grid-template-columns: 1fr;
-  }
-
-  .adminItem {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 14px;
-  }
-
-  .formGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .scheduleModalCard {
-    width: 100%;
-    max-width: 820px;
-    background: #ffffff;
-    border-radius: 14px;
-    padding: 22px;
-    box-shadow: 0 14px 40px rgba(15, 23, 42, 0.22);
-  }
-
-  .scheduleTable {
-    width: 100%;
-  }
-
-  .scheduleTableHead,
-  .scheduleTableRow {
-    display: grid;
-    grid-template-columns: 1fr 0.8fr 1.5fr 1.5fr 1fr;
-    align-items: center;
-    column-gap: 14px;
-  }
-
-  .scheduleTableHead {
-    padding: 0 8px 14px;
-    border-bottom: 1px solid #e5e7eb;
-    color: #111827;
-    font-size: 14px;
-    font-weight: 700;
-  }
-
-  .scheduleTableRow {
-    min-height: 46px;
-    padding: 0 8px;
-    border-bottom: 1px solid #e5e7eb;
-    font-size: 14px;
-    color: #111827;
-  }
-
-  .scheduleTableRow:last-child {
-    border-bottom: none;
-  }
-
-  .scheduleStatus {
-    width: fit-content;
-    border-radius: 8px;
-    padding: 4px 10px;
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: lowercase;
-  }
-
-  @media (max-width: 650px) {
-    .scheduleTableHead {
-      display: none;
-    }
-
-    .scheduleTableRow {
-      grid-template-columns: 1fr;
-      gap: 8px;
-      padding: 14px 8px;
-    }
-  }
-}
 .scheduleModalCard {
   width: 100%;
   max-width: 820px;
@@ -538,7 +469,60 @@
   text-transform: lowercase;
 }
 
+.scheduled {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.confirmed {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.completed {
+  background: #edf2f7;
+  color: #334155;
+}
+
+.cancelled {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+@media (max-width: 950px) {
+  .doctorsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 650px) {
+  .content {
+    padding: 24px 16px;
+  }
+
+  .headerRow {
+    flex-direction: column;
+  }
+
+  .addBtn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .actions {
+    grid-template-columns: 1fr;
+  }
+
+  .adminItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
   .scheduleTableHead {
     display: none;
   }

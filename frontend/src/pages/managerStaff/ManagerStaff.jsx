@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Mail, Phone, UserPlus, Search } from "lucide-react";
+import { Mail, Phone, UserPlus, Search, CalendarDays } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../context/AuthContext";
@@ -11,8 +11,10 @@ function ManagerStaff() {
   const { user } = useAuth();
 
   const [staff, setStaff] = useState([]);
+  const [appointmentCounts, setAppointmentCounts] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [editingEmployee, setEditingEmployee] = useState(null);
+
   const [editForm, setEditForm] = useState({
     firstName: "",
     lastName: "",
@@ -20,11 +22,26 @@ function ManagerStaff() {
     phone: "",
     role: "",
   });
+
   const [scheduleDoctor, setScheduleDoctor] = useState(null);
   const [doctorAppointments, setDoctorAppointments] = useState([]);
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [error, setError] = useState("");
+
   const navigate = useNavigate();
+
+  const loadAppointmentCounts = async () => {
+    try {
+      const res = await api.get("/appointments/doctor-counts");
+
+      setAppointmentCounts(res.data || {});
+    } catch (err) {
+      console.log(
+        "Failed to load appointment counts",
+        err.response?.data || err,
+      );
+    }
+  };
 
   useEffect(() => {
     const loadStaff = async () => {
@@ -39,6 +56,15 @@ function ManagerStaff() {
     };
 
     loadStaff();
+    loadAppointmentCounts();
+
+    const appointmentCountInterval = setInterval(() => {
+      loadAppointmentCounts();
+    }, 2000);
+
+    return () => {
+      clearInterval(appointmentCountInterval);
+    };
   }, []);
 
   const filteredStaff = staff.filter((employee) => {
@@ -63,6 +89,7 @@ function ManagerStaff() {
   const doctors = filteredStaff.filter(
     (employee) => employee.role === "doctor",
   );
+
   const managers = filteredStaff.filter(
     (employee) => employee.role === "manager",
   );
@@ -70,6 +97,7 @@ function ManagerStaff() {
   const getInitials = (employee) => {
     const first = employee.first_name?.[0] || "";
     const last = employee.last_name?.[0] || "";
+
     return `${first}${last}`;
   };
 
@@ -148,6 +176,7 @@ function ManagerStaff() {
 
     try {
       const res = await api.get(`/appointments?doctorId=${doctor.id}`);
+
       setDoctorAppointments(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.log("Failed to load doctor schedule", err);
@@ -166,11 +195,13 @@ function ManagerStaff() {
 
   const formatDate = (date) => {
     if (!date) return "";
+
     return new Date(date).toLocaleDateString("en-GB");
   };
 
   const formatTime = (time) => {
     if (!time) return "";
+
     return String(time).slice(0, 5);
   };
 
@@ -204,6 +235,7 @@ function ManagerStaff() {
 
           <div className={styles.searchBox}>
             <Search size={19} />
+
             <input
               type="text"
               placeholder="Search staff..."
@@ -256,6 +288,15 @@ function ManagerStaff() {
                       </div>
                     </div>
 
+                    <div className={styles.appointmentCount}>
+                      <div>
+                        <CalendarDays size={17} />
+                        <span>Total Appointments</span>
+                      </div>
+
+                      <strong>{appointmentCounts[doctor.id] || 0}</strong>
+                    </div>
+
                     <div className={styles.actions}>
                       <button
                         className={styles.editBtn}
@@ -300,6 +341,7 @@ function ManagerStaff() {
                         <h3>
                           {manager.first_name} {manager.last_name}
                         </h3>
+
                         <p>{manager.email}</p>
                       </div>
                     </div>
@@ -431,13 +473,17 @@ function ManagerStaff() {
                       key={appointment.id}
                     >
                       <span>{formatDate(appointment.date)}</span>
+
                       <span>{formatTime(appointment.time)}</span>
+
                       <span>
                         {appointment.patient_name || "Unknown patient"}
                       </span>
+
                       <span>
                         {appointment.treatment_type || "Not provided"}
                       </span>
+
                       <span
                         className={`${styles.scheduleStatus} ${
                           styles[appointment.status] || ""

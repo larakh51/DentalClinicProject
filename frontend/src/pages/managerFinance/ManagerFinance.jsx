@@ -6,11 +6,15 @@ import api from "../../services/api";
 import Sidebar from "../../components/sidebar/Sidebar";
 import styles from "./managerFinance.module.css";
 
+const INVOICES_PER_PAGE = 7;
+
 function ManagerFinance() {
   const { user } = useAuth();
 
   const [invoices, setInvoices] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
   const [stats, setStats] = useState({
     totalRevenue: 0,
     collected: 0,
@@ -43,6 +47,10 @@ function ManagerFinance() {
     loadFinanceData();
   }, []);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   const formatDate = (date) => {
     if (!date) return "";
     return new Date(date).toLocaleDateString("en-GB");
@@ -65,6 +73,16 @@ function ManagerFinance() {
       status.includes(search)
     );
   });
+
+  const totalPages = Math.ceil(filteredInvoices.length / INVOICES_PER_PAGE);
+
+  const firstInvoiceIndex = (currentPage - 1) * INVOICES_PER_PAGE;
+  const lastInvoiceIndex = firstInvoiceIndex + INVOICES_PER_PAGE;
+
+  const paginatedInvoices = filteredInvoices.slice(
+    firstInvoiceIndex,
+    lastInvoiceIndex,
+  );
 
   return (
     <div className={styles.page}>
@@ -134,6 +152,7 @@ function ManagerFinance() {
 
             <div className={styles.searchBox}>
               <Search size={19} />
+
               <input
                 type="text"
                 placeholder="Search invoices..."
@@ -154,7 +173,7 @@ function ManagerFinance() {
               {filteredInvoices.length === 0 ? (
                 <div className={styles.emptyBox}>No invoices found</div>
               ) : (
-                filteredInvoices.map((invoice) => (
+                paginatedInvoices.map((invoice) => (
                   <div className={styles.tableRow} key={invoice.id}>
                     <strong>#{invoice.id}</strong>
 
@@ -175,6 +194,51 @@ function ManagerFinance() {
                 ))
               )}
             </div>
+
+            {totalPages > 1 && (
+              <div className={styles.pagination}>
+                <button
+                  type="button"
+                  className={styles.paginationArrow}
+                  disabled={currentPage === 1}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(prev - 1, 1))
+                  }
+                >
+                  ‹
+                </button>
+
+                {Array.from({ length: totalPages }, (_, index) => {
+                  const pageNumber = index + 1;
+
+                  return (
+                    <button
+                      type="button"
+                      key={pageNumber}
+                      className={
+                        currentPage === pageNumber
+                          ? `${styles.pageButton} ${styles.activePage}`
+                          : styles.pageButton
+                      }
+                      onClick={() => setCurrentPage(pageNumber)}
+                    >
+                      {pageNumber}
+                    </button>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  className={styles.paginationArrow}
+                  disabled={currentPage === totalPages}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
+                >
+                  ›
+                </button>
+              </div>
+            )}
           </section>
         </section>
       </main>

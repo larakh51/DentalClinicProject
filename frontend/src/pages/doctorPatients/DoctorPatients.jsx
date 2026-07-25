@@ -6,11 +6,14 @@ import api from "../../services/api";
 import Sidebar from "../../components/sidebar/Sidebar";
 import styles from "./doctorPatients.module.css";
 
+const PATIENTS_PER_PAGE = 6;
+
 function DoctorPatients() {
   const { user } = useAuth();
 
   const [patients, setPatients] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -30,6 +33,10 @@ function DoctorPatients() {
     loadPatients();
   }, [user]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   const getInitials = (patient) => {
     const first = patient.first_name?.[0] || "";
     const last = patient.last_name?.[0] || "";
@@ -43,6 +50,22 @@ function DoctorPatients() {
 
     return fullName.includes(search) || email.includes(search);
   });
+
+  const totalPages = Math.ceil(filteredPatients.length / PATIENTS_PER_PAGE);
+
+  const firstPatientIndex = (currentPage - 1) * PATIENTS_PER_PAGE;
+  const lastPatientIndex = firstPatientIndex + PATIENTS_PER_PAGE;
+
+  const paginatedPatients = filteredPatients.slice(
+    firstPatientIndex,
+    lastPatientIndex,
+  );
+
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
 
   return (
     <div className={styles.page}>
@@ -65,6 +88,7 @@ function DoctorPatients() {
           <section className={styles.searchCard}>
             <div className={styles.searchBox}>
               <Search size={20} />
+
               <input
                 type="text"
                 placeholder="Search patients by name or email..."
@@ -79,40 +103,90 @@ function DoctorPatients() {
           {filteredPatients.length === 0 ? (
             <div className={styles.emptyBox}>No patients found</div>
           ) : (
-            <section className={styles.patientsGrid}>
-              {filteredPatients.map((patient) => (
-                <div className={styles.patientCard} key={patient.id}>
-                  <div className={styles.patientHeader}>
-                    <div className={styles.avatar}>{getInitials(patient)}</div>
+            <>
+              <section className={styles.patientsGrid}>
+                {paginatedPatients.map((patient) => (
+                  <div className={styles.patientCard} key={patient.id}>
+                    <div className={styles.patientHeader}>
+                      <div className={styles.avatar}>
+                        {getInitials(patient)}
+                      </div>
 
-                    <div>
-                      <h2>
-                        {patient.first_name} {patient.last_name}
-                      </h2>
-                      <p>{patient.email}</p>
+                      <div>
+                        <h2>
+                          {patient.first_name} {patient.last_name}
+                        </h2>
+
+                        <p>{patient.email}</p>
+                      </div>
                     </div>
+
+                    <div className={styles.infoRow}>
+                      <div className={styles.infoLeft}>
+                        <CalendarDays size={17} />
+                        <span>Appointments</span>
+                      </div>
+
+                      <strong>{patient.appointments_count || 0}</strong>
+                    </div>
+
+                    {Number(patient.has_allergies) === 1 && (
+                      <div className={styles.allergyRow}>
+                        <AlertCircle size={16} />
+                        <span>Has allergies</span>
+                      </div>
+                    )}
+
+                    <button className={styles.detailsBtn}>View Details</button>
                   </div>
+                ))}
+              </section>
 
-                  <div className={styles.infoRow}>
-                    <div className={styles.infoLeft}>
-                      <CalendarDays size={17} />
-                      <span>Appointments</span>
-                    </div>
+              {totalPages > 1 && (
+                <div className={styles.pagination}>
+                  <button
+                    type="button"
+                    className={styles.paginationArrow}
+                    disabled={currentPage === 1}
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(prev - 1, 1))
+                    }
+                  >
+                    ‹
+                  </button>
 
-                    <strong>{patient.appointments_count || 0}</strong>
-                  </div>
+                  {Array.from({ length: totalPages }, (_, index) => {
+                    const pageNumber = index + 1;
 
-                  {Number(patient.has_allergies) === 1 && (
-                    <div className={styles.allergyRow}>
-                      <AlertCircle size={16} />
-                      <span>Has allergies</span>
-                    </div>
-                  )}
+                    return (
+                      <button
+                        type="button"
+                        key={pageNumber}
+                        className={
+                          currentPage === pageNumber
+                            ? `${styles.pageButton} ${styles.activePage}`
+                            : styles.pageButton
+                        }
+                        onClick={() => setCurrentPage(pageNumber)}
+                      >
+                        {pageNumber}
+                      </button>
+                    );
+                  })}
 
-                  <button className={styles.detailsBtn}>View Details</button>
+                  <button
+                    type="button"
+                    className={styles.paginationArrow}
+                    disabled={currentPage === totalPages}
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                    }
+                  >
+                    ›
+                  </button>
                 </div>
-              ))}
-            </section>
+              )}
+            </>
           )}
         </section>
       </main>

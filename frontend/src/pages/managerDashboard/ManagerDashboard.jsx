@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   UsersRound,
@@ -15,14 +15,81 @@ import api from "../../services/api";
 import Sidebar from "../../components/sidebar/Sidebar";
 import styles from "./managerDashboard.module.css";
 
+const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
+
+const toSqlDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
+const parseSqlDate = (value) => {
+  if (!value) return null;
+
+  const [year, month, day] = String(value).split("T")[0].split("-").map(Number);
+
+  if (!year || !month || !day) return null;
+
+  const date = new Date(year, month - 1, day);
+  date.setHours(0, 0, 0, 0);
+
+  return date;
+};
+
+const addDays = (date, amount) => {
+  const result = new Date(date);
+  result.setDate(result.getDate() + amount);
+
+  return result;
+};
+
+const getDateKey = (date) => {
+  if (!date) return "";
+
+  return String(date).split("T")[0];
+};
+
+const getShortDate = (date) => {
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+
+  return `${day}/${month}`;
+};
+
+const getDaysBetween = (startDate, endDate) => {
+  return (
+    Math.round(
+      (endDate.getTime() - startDate.getTime()) / DAY_IN_MILLISECONDS,
+    ) + 1
+  );
+};
+
 function ManagerDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  const currentDate = new Date();
+
+  const defaultCustomStartDate = addDays(currentDate, -6);
 
   const [appointments, setAppointments] = useState([]);
   const [patients, setPatients] = useState([]);
   const [staff, setStaff] = useState([]);
   const [invoices, setInvoices] = useState([]);
+
+  const [appointmentPeriod, setAppointmentPeriod] = useState("week");
+
+  const [customStartDate, setCustomStartDate] = useState(
+    toSqlDate(defaultCustomStartDate),
+  );
+
+  const [customEndDate, setCustomEndDate] = useState(toSqlDate(currentDate));
+
+  const [chartAppointments, setChartAppointments] = useState([]);
+  const [chartLoading, setChartLoading] = useState(false);
+  const [chartError, setChartError] = useState("");
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -62,6 +129,7 @@ function ManagerDashboard() {
         console.log("Failed to load users", error);
 
         setPatients(new Array(15).fill(null));
+
         setStaff([
           {
             id: "d1",
@@ -133,10 +201,293 @@ function ManagerDashboard() {
     loadDashboardData();
   }, []);
 
-  const today = new Date().toISOString().split("T")[0];
+  const chartRange = useMemo(() => {
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+
+    if (appointmentPeriod === "week") {
+      const currentDay = todayDate.getDay();
+
+      const distanceFromMonday = currentDay === 0 ? -6 : 1 - currentDay;
+
+      const start = addDays(todayDate, distanceFromMonday);
+      const end = addDays(start, 4);
+
+      return {
+        start,
+        end,
+      };
+    }
+
+    if (appointmentPeriod === "month") {
+      const start = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1);
+
+      const end = new Date(
+        todayDate.getFullYear(),
+        todayDate.getMonth() + 1,
+        0,
+      );
+
+      return {
+        start,
+        end,
+      };
+    }
+
+    if (appointmentPeriod === "threeMonths") {
+      const start = new Date(
+        todayDate.getFullYear(),
+        todayDate.getMonth() - 2,
+        1,
+      );
+
+      const end = new Date(
+        todayDate.getFullYear(),
+        todayDate.getMonth() + 1,
+        0,
+      );
+
+      return {
+        start,
+        end,
+      };
+    }
+
+    if (appointmentPeriod === "custom") {
+      const start = parseSqlDate(customStartDate);
+      const end = parseSqlDate(customEndDate);
+
+      if (!start || !end || start > end) {
+        return null;
+      }
+
+      return {
+        start,
+        end,
+      };
+    }
+
+    return null;
+  }, [appointmentPeriod, customStartDate, customEndDate]);
+
+  useEffect(() => {
+    let ignoreResult = false;
+
+    const loadChartAppointments = async () => {
+      if (!chartRange) {
+        setChartAppointments([]);
+        setChartError("");
+        setChartLoading(false);
+        return;
+      }
+
+      try {
+        setChartLoading(true);
+        setChartError("");
+
+        const res = await api.get("/appointments", {
+          params: {
+            fromDate: toSqlDate(chartRange.start),
+            toDate: toSqlDate(chartRange.end),
+          },
+        });
+
+        if (!ignoreResult) {
+          setChartAppointments(Array.isArray(res.data) ? res.data : []);
+        }
+      } catch (error) {
+        console.log("Failed to load appointment chart", error);
+
+        if (!ignoreResult) {
+          setChartError(
+            error.response?.data?.message || "Failed to load appointment chart",
+          );
+
+          setChartAppointments([]);
+        }
+      } finally {
+        if (!ignoreResult) {
+          setChartLoading(false);
+        }
+      }
+    };
+
+    loadChartAppointments();
+
+    return () => {
+      ignoreResult = true;
+    };
+  }, [chartRange]);
+
+  const appointmentChartData = useMemo(() => {
+    if (!chartRange) return [];
+
+    const countsByDate = {};
+
+    chartAppointments.forEach((appointment) => {
+      const appointmentDate = getDateKey(appointment.date);
+
+      if (!appointmentDate) return;
+
+      countsByDate[appointmentDate] = (countsByDate[appointmentDate] || 0) + 1;
+    });
+
+    const getCountBetweenDates = (startDate, endDate) => {
+      let total = 0;
+      let cursor = new Date(startDate);
+
+      while (cursor <= endDate) {
+        total += countsByDate[toSqlDate(cursor)] || 0;
+        cursor = addDays(cursor, 1);
+      }
+
+      return total;
+    };
+
+    const buildDailyData = (startDate, endDate, useWeekdayLabel) => {
+      const data = [];
+      let cursor = new Date(startDate);
+
+      while (cursor <= endDate) {
+        const dateKey = toSqlDate(cursor);
+
+        data.push({
+          label: useWeekdayLabel
+            ? cursor.toLocaleDateString("en-GB", {
+                weekday: "short",
+              })
+            : getShortDate(cursor),
+
+          count: countsByDate[dateKey] || 0,
+        });
+
+        cursor = addDays(cursor, 1);
+      }
+
+      return data;
+    };
+
+    const buildWeeklyData = (startDate, endDate) => {
+      const data = [];
+      let cursor = new Date(startDate);
+
+      while (cursor <= endDate) {
+        const bucketStart = new Date(cursor);
+        const possibleEnd = addDays(bucketStart, 6);
+
+        const bucketEnd =
+          possibleEnd > endDate ? new Date(endDate) : possibleEnd;
+
+        data.push({
+          label: `${getShortDate(bucketStart)}-${getShortDate(bucketEnd)}`,
+
+          count: getCountBetweenDates(bucketStart, bucketEnd),
+        });
+
+        cursor = addDays(bucketEnd, 1);
+      }
+
+      return data;
+    };
+
+    const buildMonthlyData = (startDate, endDate) => {
+      const data = [];
+
+      let monthCursor = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        1,
+      );
+
+      while (monthCursor <= endDate) {
+        const monthStart =
+          monthCursor < startDate ? new Date(startDate) : new Date(monthCursor);
+
+        const lastDayOfMonth = new Date(
+          monthCursor.getFullYear(),
+          monthCursor.getMonth() + 1,
+          0,
+        );
+
+        const monthEnd =
+          lastDayOfMonth > endDate ? new Date(endDate) : lastDayOfMonth;
+
+        data.push({
+          label: monthCursor.toLocaleDateString("en-GB", {
+            month: "short",
+            year: "2-digit",
+          }),
+
+          count: getCountBetweenDates(monthStart, monthEnd),
+        });
+
+        monthCursor = new Date(
+          monthCursor.getFullYear(),
+          monthCursor.getMonth() + 1,
+          1,
+        );
+      }
+
+      return data;
+    };
+
+    if (appointmentPeriod === "week") {
+      return buildDailyData(chartRange.start, chartRange.end, true);
+    }
+
+    if (appointmentPeriod === "month") {
+      return buildWeeklyData(chartRange.start, chartRange.end);
+    }
+
+    if (appointmentPeriod === "threeMonths") {
+      return buildMonthlyData(chartRange.start, chartRange.end);
+    }
+
+    const totalDays = getDaysBetween(chartRange.start, chartRange.end);
+
+    if (totalDays <= 14) {
+      return buildDailyData(chartRange.start, chartRange.end, false);
+    }
+
+    if (totalDays <= 90) {
+      return buildWeeklyData(chartRange.start, chartRange.end);
+    }
+
+    return buildMonthlyData(chartRange.start, chartRange.end);
+  }, [chartAppointments, chartRange, appointmentPeriod]);
+
+  const maximumAppointmentCount = Math.max(
+    ...appointmentChartData.map((item) => item.count),
+    0,
+  );
+
+  const yAxisMaximum = Math.max(4, Math.ceil(maximumAppointmentCount / 4) * 4);
+
+  const yAxisLabels = [
+    yAxisMaximum,
+    Math.round(yAxisMaximum * 0.75),
+    Math.round(yAxisMaximum * 0.5),
+    Math.round(yAxisMaximum * 0.25),
+    0,
+  ];
+
+  const chartPeriodName = {
+    week: "This Week",
+    month: "This Month",
+    threeMonths: "Last 3 Months",
+    custom: "Custom Range",
+  };
+
+  const chartDescription = chartRange
+    ? `${chartPeriodName[appointmentPeriod]}: ${chartRange.start.toLocaleDateString(
+        "en-GB",
+      )} - ${chartRange.end.toLocaleDateString("en-GB")}`
+    : "Select a valid date range";
+
+  const today = toSqlDate(new Date());
 
   const todayAppointments = appointments.filter(
-    (appointment) => appointment.date === today,
+    (appointment) => getDateKey(appointment.date) === today,
   );
 
   const confirmedToday = todayAppointments.filter(
@@ -145,11 +496,15 @@ function ManagerDashboard() {
 
   const totalRevenue = invoices
     .filter((invoice) => invoice.status === "paid")
-    .reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0);
+    .reduce((sum, invoice) => {
+      return sum + Number(invoice.amount || 0);
+    }, 0);
 
   const pendingPayments = invoices
     .filter((invoice) => invoice.status === "pending")
-    .reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0);
+    .reduce((sum, invoice) => {
+      return sum + Number(invoice.amount || 0);
+    }, 0);
 
   const pendingInvoices = invoices.filter(
     (invoice) => invoice.status === "pending",
@@ -157,6 +512,7 @@ function ManagerDashboard() {
 
   const formatDate = (date) => {
     if (!date) return "";
+
     return new Date(date).toLocaleDateString("en-GB");
   };
 
@@ -197,6 +553,7 @@ function ManagerDashboard() {
                 <h3>Today's Appointments</h3>
                 <strong>{todayAppointments.length}</strong>
                 <p>Scheduled for today</p>
+
                 <span className={styles.greenBadge}>
                   {confirmedToday.length} confirmed
                 </span>
@@ -210,9 +567,11 @@ function ManagerDashboard() {
             <div className={`${styles.statCard} ${styles.green}`}>
               <div>
                 <h3>Total Revenue</h3>
+
                 <strong className={styles.greenText}>
                   ₪{totalRevenue || 7020}
                 </strong>
+
                 <p>All time</p>
                 <span>₪3,020 collected</span>
               </div>
@@ -225,10 +584,13 @@ function ManagerDashboard() {
             <div className={`${styles.statCard} ${styles.orange}`}>
               <div>
                 <h3>Pending Payments</h3>
+
                 <strong className={styles.orangeText}>
                   ₪{pendingPayments || 4000}
                 </strong>
+
                 <p>To be collected</p>
+
                 <span>{pendingInvoices.length || 5} invoices</span>
               </div>
 
@@ -268,11 +630,15 @@ function ManagerDashboard() {
                     <span className={styles.dateBadge}>
                       {formatDate(appointment.date)}
                     </span>
+
                     <span>{appointment.time}</span>
+
                     <span className={styles.bold}>
                       {appointment.patient_name}
                     </span>
+
                     <span>{appointment.treatment_type}</span>
+
                     <span
                       className={`${styles.status} ${
                         styles[appointment.status] || ""
@@ -326,6 +692,7 @@ function ManagerDashboard() {
 
                     <div className={styles.invoiceRight}>
                       <strong>₪{invoice.amount}</strong>
+
                       <span
                         className={`${styles.status} ${
                           styles[invoice.status] || ""
@@ -342,43 +709,118 @@ function ManagerDashboard() {
 
           <section className={styles.chartsGrid}>
             <div className={styles.chartCard}>
-              <div className={styles.sectionHeader}>
-                <h2>Weekly Appointments</h2>
-                <p>Appointment volume this week</p>
-              </div>
-
-              <div className={styles.barChart}>
-                <div className={styles.yAxis}>
-                  <span>8</span>
-                  <span>6</span>
-                  <span>4</span>
-                  <span>2</span>
-                  <span>0</span>
+              <div className={styles.chartHeaderRow}>
+                <div className={styles.sectionHeader}>
+                  <h2>Appointment Volume</h2>
+                  <p>{chartDescription}</p>
                 </div>
 
-                <div className={styles.bars}>
-                  <div>
-                    <span style={{ height: "38%" }}></span>
-                    <p>Mon</p>
+                <select
+                  className={styles.periodSelect}
+                  value={appointmentPeriod}
+                  onChange={(event) => setAppointmentPeriod(event.target.value)}
+                  aria-label="Select appointment period"
+                >
+                  <option value="week">This Week</option>
+                  <option value="month">This Month</option>
+
+                  <option value="threeMonths">Last 3 Months</option>
+
+                  <option value="custom">Custom Range</option>
+                </select>
+              </div>
+
+              {appointmentPeriod === "custom" && (
+                <div className={styles.customRange}>
+                  <label>
+                    From
+                    <input
+                      type="date"
+                      value={customStartDate}
+                      max={customEndDate || undefined}
+                      onChange={(event) =>
+                        setCustomStartDate(event.target.value)
+                      }
+                    />
+                  </label>
+
+                  <label>
+                    To
+                    <input
+                      type="date"
+                      value={customEndDate}
+                      min={customStartDate || undefined}
+                      onChange={(event) => setCustomEndDate(event.target.value)}
+                    />
+                  </label>
+                </div>
+              )}
+
+              {chartLoading ? (
+                <div className={styles.chartMessage}>
+                  Loading appointment data...
+                </div>
+              ) : !chartRange ? (
+                <div className={styles.chartError}>
+                  Start date must be before end date
+                </div>
+              ) : chartError ? (
+                <div className={styles.chartError}>{chartError}</div>
+              ) : (
+                <div className={styles.barChart}>
+                  <div className={styles.yAxis}>
+                    {yAxisLabels.map((label, index) => (
+                      <span key={`${label}-${index}`}>{label}</span>
+                    ))}
                   </div>
-                  <div>
-                    <span style={{ height: "63%" }}></span>
-                    <p>Tue</p>
-                  </div>
-                  <div>
-                    <span style={{ height: "50%" }}></span>
-                    <p>Wed</p>
-                  </div>
-                  <div>
-                    <span style={{ height: "75%" }}></span>
-                    <p>Thu</p>
-                  </div>
-                  <div>
-                    <span style={{ height: "38%" }}></span>
-                    <p>Fri</p>
+
+                  <div className={styles.barsScroll}>
+                    <div
+                      className={styles.bars}
+                      style={{
+                        gridTemplateColumns: `repeat(${Math.max(
+                          appointmentChartData.length,
+                          1,
+                        )}, minmax(48px, 1fr))`,
+
+                        minWidth: `${Math.max(
+                          440,
+                          appointmentChartData.length * 78,
+                        )}px`,
+                      }}
+                    >
+                      {appointmentChartData.map((item, index) => {
+                        const barHeight =
+                          item.count === 0
+                            ? "0%"
+                            : `${Math.max(
+                                (item.count / yAxisMaximum) * 100,
+                                4,
+                              )}%`;
+
+                        return (
+                          <div
+                            className={styles.barItem}
+                            key={`${item.label}-${index}`}
+                          >
+                            <div
+                              className={styles.barColumn}
+                              style={{
+                                height: barHeight,
+                              }}
+                            >
+                              <small>{item.count}</small>
+                              <span></span>
+                            </div>
+
+                            <p>{item.label}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <div className={styles.chartCard}>
@@ -421,14 +863,17 @@ function ManagerDashboard() {
                     <span className={styles.dotBlue}></span>
                     Cleaning: 7
                   </div>
+
                   <div>
                     <span className={styles.dotGreen}></span>
                     Filling: 4
                   </div>
+
                   <div>
                     <span className={styles.dotOrange}></span>
                     Root Canal: 2
                   </div>
+
                   <div>
                     <span className={styles.dotPurple}></span>
                     Other: 8
@@ -457,11 +902,13 @@ function ManagerDashboard() {
                   <div className={styles.staffItem} key={doctor?.id || index}>
                     <div className={styles.staffLeft}>
                       <div className={styles.staffAvatar}>⌁</div>
+
                       <div>
                         <h3>
                           Dr. {doctor?.first_name || "David"}{" "}
                           {doctor?.last_name || "Levi"}
                         </h3>
+
                         <p>Dentist</p>
                       </div>
                     </div>
@@ -482,6 +929,7 @@ function ManagerDashboard() {
               <div className={styles.iconBoxPurple}>
                 <UsersRound size={22} />
               </div>
+
               <div>
                 <h3>Manage Patients</h3>
                 <p>{patients.length} total patients</p>
@@ -492,6 +940,7 @@ function ManagerDashboard() {
               <div className={styles.iconBoxBlue}>
                 <BarChart3 size={22} />
               </div>
+
               <div>
                 <h3>View Reports</h3>
                 <p>Analytics & insights</p>
@@ -502,6 +951,7 @@ function ManagerDashboard() {
               <div className={styles.iconBoxGreen}>
                 <DollarSign size={22} />
               </div>
+
               <div>
                 <h3>Finance</h3>
                 <p>₪{totalRevenue || 7020} revenue</p>

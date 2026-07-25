@@ -16,6 +16,7 @@ const formatSqlDate = (date) => {
 
 const normalizeTime = (time) => {
   if (!time) return "";
+
   const value = String(time);
 
   if (value.length === 5) {
@@ -25,9 +26,65 @@ const normalizeTime = (time) => {
   return value;
 };
 
+const isValidSqlDate = (date) => {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(date || ""));
+};
+
+const getDoctorAppointmentCounts = async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT
+         doctor_id,
+         COUNT(*) AS total_appointments
+       FROM appointments
+       WHERE doctor_id IS NOT NULL
+       GROUP BY doctor_id`,
+    );
+
+    const appointmentCounts = {};
+
+    rows.forEach((row) => {
+      appointmentCounts[row.doctor_id] = Number(row.total_appointments || 0);
+    });
+
+    res.json(appointmentCounts);
+  } catch (error) {
+    console.error("GET DOCTOR APPOINTMENT COUNTS ERROR:", error);
+
+    res.status(500).json({
+      message: "Failed to get doctor appointment counts",
+      error: error.sqlMessage || error.message,
+    });
+  }
+};
+
 const getAppointments = async (req, res) => {
   try {
-    const { doctorId, patientId, date } = req.query;
+    const { doctorId, patientId, date, fromDate, toDate } = req.query;
+
+    if (date && !isValidSqlDate(date)) {
+      return res.status(400).json({
+        message: "Invalid date format",
+      });
+    }
+
+    if (fromDate && !isValidSqlDate(fromDate)) {
+      return res.status(400).json({
+        message: "Invalid fromDate format",
+      });
+    }
+
+    if (toDate && !isValidSqlDate(toDate)) {
+      return res.status(400).json({
+        message: "Invalid toDate format",
+      });
+    }
+
+    if (fromDate && toDate && fromDate > toDate) {
+      return res.status(400).json({
+        message: "fromDate must be before toDate",
+      });
+    }
 
     let sql = `
       SELECT
@@ -54,8 +111,10 @@ const getAppointments = async (req, res) => {
         ) AS doctor_name
 
       FROM appointments a
-      LEFT JOIN users patient ON a.patient_id = patient.id
-      LEFT JOIN users doctor ON a.doctor_id = doctor.id
+      LEFT JOIN users patient
+        ON a.patient_id = patient.id
+      LEFT JOIN users doctor
+        ON a.doctor_id = doctor.id
       WHERE 1=1
     `;
 
@@ -74,6 +133,16 @@ const getAppointments = async (req, res) => {
     if (date) {
       sql += " AND a.date = ?";
       params.push(date);
+    }
+
+    if (fromDate) {
+      sql += " AND a.date >= ?";
+      params.push(fromDate);
+    }
+
+    if (toDate) {
+      sql += " AND a.date <= ?";
+      params.push(toDate);
     }
 
     sql += " ORDER BY a.date DESC, a.time DESC";
@@ -111,6 +180,18 @@ const createAppointment = async (req, res) => {
       });
     }
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const appointmentDate = new Date(`${date}T00:00:00`);
+    appointmentDate.setHours(0, 0, 0, 0);
+
+    if (Number.isNaN(appointmentDate.getTime()) || appointmentDate <= today) {
+      return res.status(400).json({
+        message: "Appointments cannot be booked for the same day",
+      });
+    }
+
     let finalTreatmentType = treatmentType || null;
     let durationMinutes = 30;
     let finalTreatmentTypeId = treatmentTypeId || null;
@@ -119,7 +200,8 @@ const createAppointment = async (req, res) => {
       const [types] = await pool.query(
         `SELECT id, name, duration_minutes
          FROM treatment_types
-         WHERE id = ? AND status = 'active'`,
+         WHERE id = ?
+           AND status = 'active'`,
         [treatmentTypeId],
       );
 
@@ -130,7 +212,9 @@ const createAppointment = async (req, res) => {
       }
 
       finalTreatmentType = types[0].name;
+
       durationMinutes = Number(types[0].duration_minutes || 30);
+
       finalTreatmentTypeId = types[0].id;
     }
 
@@ -141,11 +225,21 @@ const createAppointment = async (req, res) => {
     }
 
     const [[endResult]] = await pool.query(
-      `SELECT ADDTIME(?, SEC_TO_TIME(? * 60)) AS endTime`,
+      `SELECT ADDTIME(
+         ?,
+         SEC_TO_TIME(? * 60)
+       ) AS endTime`,
       [time, durationMinutes],
     );
 
     const endTime = endResult.endTime;
+    const clinicClosingTime = "19:00:00";
+
+    if (String(endTime).slice(0, 8) > clinicClosingTime) {
+      return res.status(400).json({
+        message: "The appointment must end before the clinic closes at 19:00",
+      });
+    }
 
     const [conflicts] = await pool.query(
       `SELECT id, time, end_time
@@ -154,7 +248,15 @@ const createAppointment = async (req, res) => {
          AND date = ?
          AND status != 'cancelled'
          AND time < ?
-         AND COALESCE(end_time, ADDTIME(time, SEC_TO_TIME(COALESCE(duration_minutes, 30) * 60))) > ?`,
+         AND COALESCE(
+           end_time,
+           ADDTIME(
+             time,
+             SEC_TO_TIME(
+               COALESCE(duration_minutes, 30) * 60
+             )
+           )
+         ) > ?`,
       [doctorId, date, endTime, time],
     );
 
@@ -164,26 +266,30 @@ const createAppointment = async (req, res) => {
       });
     }
 
-    const id = "a" + Date.now();
+    const id = `a${Date.now()}`;
 
     await pool.query(
-      `INSERT INTO appointments 
+      `INSERT INTO appointments
        (
-        id,
-        patient_id,
-        patient_name,
-        doctor_id,
-        doctor_name,
-        date,
-        time,
-        end_time,
-        duration_minutes,
-        treatment_type_id,
-        treatment_type,
-        status,
-        notes
+         id,
+         patient_id,
+         patient_name,
+         doctor_id,
+         doctor_name,
+         date,
+         time,
+         end_time,
+         duration_minutes,
+         treatment_type_id,
+         treatment_type,
+         status,
+         notes
        )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', ?)`,
+       VALUES (
+         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+         'scheduled',
+         ?
+       )`,
       [
         id,
         patientId,
@@ -273,13 +379,18 @@ const updateAppointment = async (req, res) => {
 
       if (types.length > 0) {
         finalTreatmentType = types[0].name;
+
         durationMinutes = Number(types[0].duration_minutes || 30);
+
         finalTreatmentTypeId = types[0].id;
       }
     }
 
     const [[endResult]] = await pool.query(
-      `SELECT ADDTIME(?, SEC_TO_TIME(? * 60)) AS endTime`,
+      `SELECT ADDTIME(
+         ?,
+         SEC_TO_TIME(? * 60)
+       ) AS endTime`,
       [finalTime, durationMinutes],
     );
 
@@ -309,7 +420,15 @@ const updateAppointment = async (req, res) => {
            AND id != ?
            AND status != 'cancelled'
            AND time < ?
-           AND COALESCE(end_time, ADDTIME(time, SEC_TO_TIME(COALESCE(duration_minutes, 30) * 60))) > ?`,
+           AND COALESCE(
+             end_time,
+             ADDTIME(
+               time,
+               SEC_TO_TIME(
+                 COALESCE(duration_minutes, 30) * 60
+               )
+             )
+           ) > ?`,
         [appointment.doctor_id, finalDate, id, endTime, finalTime],
       );
 
@@ -375,10 +494,18 @@ const updateAppointmentStatus = async (req, res) => {
       });
     }
 
-    await pool.query("UPDATE appointments SET status = ? WHERE id = ?", [
-      status,
-      id,
-    ]);
+    const [result] = await pool.query(
+      `UPDATE appointments
+       SET status = ?
+       WHERE id = ?`,
+      [status, id],
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        message: "Appointment not found",
+      });
+    }
 
     res.json({
       message: "Appointment status updated successfully",
@@ -395,6 +522,7 @@ const updateAppointmentStatus = async (req, res) => {
 
 module.exports = {
   getAppointments,
+  getDoctorAppointmentCounts,
   createAppointment,
   updateAppointment,
   updateAppointmentStatus,

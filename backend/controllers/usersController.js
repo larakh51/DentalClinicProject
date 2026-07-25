@@ -239,7 +239,18 @@ const getUserById = async (req, res) => {
     const { id } = req.params;
 
     const [users] = await pool.query(
-      `SELECT id, email, role, first_name, last_name, phone, birth_date, id_number, avatar, status
+      `SELECT
+         id,
+         email,
+         role,
+         first_name,
+         last_name,
+         phone,
+         birth_date,
+         id_number,
+         avatar,
+         status,
+         password_changed_at
        FROM users
        WHERE id = ?`,
       [id],
@@ -414,13 +425,24 @@ const changePassword = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    await pool.query("UPDATE users SET password = ? WHERE id = ?", [
-      hashedPassword,
-      id,
-    ]);
+    await pool.query(
+      `UPDATE users
+       SET password = ?,
+           password_changed_at = NOW()
+       WHERE id = ?`,
+      [hashedPassword, id],
+    );
+
+    const [updatedUsers] = await pool.query(
+      `SELECT password_changed_at
+       FROM users
+       WHERE id = ?`,
+      [id],
+    );
 
     res.json({
       message: "Password changed successfully",
+      passwordChangedAt: updatedUsers[0]?.password_changed_at || null,
     });
   } catch (error) {
     console.error("CHANGE PASSWORD ERROR:", error);
@@ -462,11 +484,11 @@ const deleteUser = async (req, res) => {
 module.exports = {
   getUsers,
   getDoctors,
+  getPatientByIdNumber,
   getPatientsForDoctor,
   createEmployee,
   getUserById,
   updateUser,
   changePassword,
   deleteUser,
-  getPatientByIdNumber,
 };
