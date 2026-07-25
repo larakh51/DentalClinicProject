@@ -7,6 +7,8 @@ import api from "../../services/api";
 import Sidebar from "../../components/sidebar/Sidebar";
 import styles from "./managerAppointments.module.css";
 
+const APPOINTMENTS_PER_PAGE = 7;
+
 function ManagerAppointments() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -16,7 +18,9 @@ function ManagerAppointments() {
   const [showFilters, setShowFilters] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [editingAppointment, setEditingAppointment] = useState(null);
+
   const [editForm, setEditForm] = useState({
     date: "",
     time: "",
@@ -24,6 +28,7 @@ function ManagerAppointments() {
     status: "",
     notes: "",
   });
+
   const [error, setError] = useState("");
 
   const loadAppointments = async () => {
@@ -40,6 +45,10 @@ function ManagerAppointments() {
   useEffect(() => {
     loadAppointments();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, dateFilter]);
 
   const formatDate = (date) => {
     if (!date) return "";
@@ -78,6 +87,19 @@ function ManagerAppointments() {
 
     return matchesSearch && matchesStatus && matchesDate;
   });
+
+  const totalPages = Math.ceil(
+    filteredAppointments.length / APPOINTMENTS_PER_PAGE,
+  );
+
+  const firstAppointmentIndex = (currentPage - 1) * APPOINTMENTS_PER_PAGE;
+
+  const lastAppointmentIndex = firstAppointmentIndex + APPOINTMENTS_PER_PAGE;
+
+  const paginatedAppointments = filteredAppointments.slice(
+    firstAppointmentIndex,
+    lastAppointmentIndex,
+  );
 
   const openEditModal = (appointment) => {
     setEditingAppointment(appointment);
@@ -148,6 +170,7 @@ function ManagerAppointments() {
       closeEditModal();
     } catch (error) {
       console.log("Failed to update appointment", error);
+
       setError(
         error.response?.data?.message ||
           error.response?.data?.error ||
@@ -198,6 +221,7 @@ function ManagerAppointments() {
 
               <div className={styles.searchBox}>
                 <Search size={19} />
+
                 <input
                   type="text"
                   placeholder="Search appointments..."
@@ -266,12 +290,13 @@ function ManagerAppointments() {
               {filteredAppointments.length === 0 ? (
                 <div className={styles.emptyBox}>No appointments found</div>
               ) : (
-                filteredAppointments.map((appointment) => (
+                paginatedAppointments.map((appointment) => (
                   <div className={styles.tableRow} key={appointment.id}>
                     <div>
                       <strong className={styles.dateText}>
                         {formatDate(appointment.date)}
                       </strong>
+
                       <p className={styles.timeText}>
                         {formatTime(appointment.time)}
                       </p>
@@ -305,6 +330,51 @@ function ManagerAppointments() {
                 ))
               )}
             </div>
+
+            {totalPages > 1 && (
+              <div className={styles.pagination}>
+                <button
+                  type="button"
+                  className={styles.paginationArrow}
+                  disabled={currentPage === 1}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(prev - 1, 1))
+                  }
+                >
+                  ‹
+                </button>
+
+                {Array.from({ length: totalPages }, (_, index) => {
+                  const pageNumber = index + 1;
+
+                  return (
+                    <button
+                      type="button"
+                      key={pageNumber}
+                      className={
+                        currentPage === pageNumber
+                          ? `${styles.pageButton} ${styles.activePage}`
+                          : styles.pageButton
+                      }
+                      onClick={() => setCurrentPage(pageNumber)}
+                    >
+                      {pageNumber}
+                    </button>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  className={styles.paginationArrow}
+                  disabled={currentPage === totalPages}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
+                >
+                  ›
+                </button>
+              </div>
+            )}
           </section>
         </section>
 

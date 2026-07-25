@@ -12,10 +12,13 @@ import api from "../../services/api";
 import Sidebar from "../../components/sidebar/Sidebar";
 import styles from "./payments.module.css";
 
+const INVOICES_PER_PAGE = 7;
+
 function Payments() {
   const { user } = useAuth();
 
   const [invoices, setInvoices] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -75,6 +78,19 @@ function Payments() {
   const totalOverdue = overdueInvoices.reduce((sum, invoice) => {
     return sum + Number(invoice.amount || 0);
   }, 0);
+
+  const totalPages = Math.ceil(invoices.length / INVOICES_PER_PAGE);
+
+  const firstInvoiceIndex = (currentPage - 1) * INVOICES_PER_PAGE;
+  const lastInvoiceIndex = firstInvoiceIndex + INVOICES_PER_PAGE;
+
+  const paginatedInvoices = invoices.slice(firstInvoiceIndex, lastInvoiceIndex);
+
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
 
   const formatDate = (date) => {
     if (!date) return "";
@@ -182,14 +198,17 @@ Thank you for choosing Dental Clinic.
               {invoices.length === 0 ? (
                 <div className={styles.empty}>No invoices found</div>
               ) : (
-                invoices.map((invoice) => {
+                paginatedInvoices.map((invoice) => {
                   const status = getInvoiceStatus(invoice);
 
                   return (
                     <div className={styles.tableRow} key={invoice.id}>
                       <span className={styles.invoiceId}>#{invoice.id}</span>
+
                       <span>{formatDate(invoice.date)}</span>
+
                       <span>{getInvoiceDescription(invoice)}</span>
+
                       <span>₪{invoice.amount}</span>
 
                       <span
@@ -210,6 +229,51 @@ Thank you for choosing Dental Clinic.
                 })
               )}
             </div>
+
+            {totalPages > 1 && (
+              <div className={styles.pagination}>
+                <button
+                  type="button"
+                  className={styles.paginationArrow}
+                  disabled={currentPage === 1}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(prev - 1, 1))
+                  }
+                >
+                  ‹
+                </button>
+
+                {Array.from({ length: totalPages }, (_, index) => {
+                  const pageNumber = index + 1;
+
+                  return (
+                    <button
+                      type="button"
+                      key={pageNumber}
+                      className={
+                        currentPage === pageNumber
+                          ? `${styles.pageButton} ${styles.activePage}`
+                          : styles.pageButton
+                      }
+                      onClick={() => setCurrentPage(pageNumber)}
+                    >
+                      {pageNumber}
+                    </button>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  className={styles.paginationArrow}
+                  disabled={currentPage === totalPages}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
+                >
+                  ›
+                </button>
+              </div>
+            )}
           </section>
         </section>
       </main>

@@ -7,12 +7,15 @@ import api from "../../services/api";
 import Sidebar from "../../components/sidebar/Sidebar";
 import styles from "./managerPatients.module.css";
 
+const PATIENTS_PER_PAGE = 7;
+
 function ManagerPatients() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
   const [patients, setPatients] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState("");
 
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -36,6 +39,10 @@ function ManagerPatients() {
     loadPatients();
   }, []);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   const getInitials = (patient) => {
     const first = patient.first_name?.[0] || "";
     const last = patient.last_name?.[0] || "";
@@ -54,6 +61,16 @@ function ManagerPatients() {
       phone.includes(search)
     );
   });
+
+  const totalPages = Math.ceil(filteredPatients.length / PATIENTS_PER_PAGE);
+
+  const firstPatientIndex = (currentPage - 1) * PATIENTS_PER_PAGE;
+  const lastPatientIndex = firstPatientIndex + PATIENTS_PER_PAGE;
+
+  const paginatedPatients = filteredPatients.slice(
+    firstPatientIndex,
+    lastPatientIndex,
+  );
 
   const formatDate = (date) => {
     if (!date) return "Not provided";
@@ -171,7 +188,7 @@ function ManagerPatients() {
               {filteredPatients.length === 0 ? (
                 <div className={styles.emptyBox}>No patients found</div>
               ) : (
-                filteredPatients.map((patient) => (
+                paginatedPatients.map((patient) => (
                   <div className={styles.tableRow} key={patient.id}>
                     <div className={styles.patientCell}>
                       <div className={styles.avatar}>
@@ -198,6 +215,51 @@ function ManagerPatients() {
                 ))
               )}
             </div>
+
+            {totalPages > 1 && (
+              <div className={styles.pagination}>
+                <button
+                  type="button"
+                  className={styles.paginationArrow}
+                  disabled={currentPage === 1}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(prev - 1, 1))
+                  }
+                >
+                  ‹
+                </button>
+
+                {Array.from({ length: totalPages }, (_, index) => {
+                  const pageNumber = index + 1;
+
+                  return (
+                    <button
+                      type="button"
+                      key={pageNumber}
+                      className={
+                        currentPage === pageNumber
+                          ? `${styles.pageButton} ${styles.activePage}`
+                          : styles.pageButton
+                      }
+                      onClick={() => setCurrentPage(pageNumber)}
+                    >
+                      {pageNumber}
+                    </button>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  className={styles.paginationArrow}
+                  disabled={currentPage === totalPages}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
+                >
+                  ›
+                </button>
+              </div>
+            )}
           </section>
         </section>
 

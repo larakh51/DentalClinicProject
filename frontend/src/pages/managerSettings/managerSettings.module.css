@@ -228,6 +228,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 18px;
 }
 
 .treatmentItem h3 {
@@ -244,6 +245,110 @@
 
 .treatmentItem span {
   font-weight: 700;
+}
+
+.treatmentRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.treatmentPrice {
+  white-space: nowrap;
+}
+
+.treatmentActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.treatmentActions button {
+  height: 32px;
+  border-radius: 7px;
+  padding: 0 11px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.editTreatmentBtn {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.editTreatmentBtn:hover {
+  background: #dbeafe;
+}
+
+.deleteTreatmentBtn {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.deleteTreatmentBtn:hover {
+  background: #fee2e2;
+}
+
+.treatmentEditForm {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.treatmentEditForm input {
+  width: 100%;
+  height: 39px;
+  border: none;
+  outline: none;
+  border-radius: 8px;
+  background: #f0f0f2;
+  padding: 0 13px;
+  font-size: 14px;
+  color: #111827;
+}
+
+.treatmentEditForm input:focus {
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
+  background: #ffffff;
+}
+
+.editActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.saveTreatmentBtn,
+.cancelTreatmentBtn {
+  height: 39px;
+  border-radius: 8px;
+  padding: 0 13px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.saveTreatmentBtn {
+  border: none;
+  background: #030217;
+  color: #ffffff;
+}
+
+.cancelTreatmentBtn {
+  border: 1px solid #dddddd;
+  background: #ffffff;
+  color: #111827;
 }
 
 .templateBox {
@@ -282,7 +387,20 @@
   }
 
   .grid,
-  .treatmentForm {
+  .treatmentForm,
+  .treatmentEditForm {
     grid-template-columns: 1fr;
+  }
+
+  .treatmentItem {
+    align-items: stretch;
+  }
+
+  .treatmentRight {
+    align-items: flex-start;
+  }
+
+  .treatmentActions {
+    justify-content: flex-start;
   }
 }

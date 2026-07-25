@@ -70,6 +70,8 @@ const TIME_SLOTS = [
   "18:50",
 ];
 
+const CLINIC_CLOSING_TIME = "19:00";
+
 function BookAppointment() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -81,6 +83,7 @@ function BookAppointment() {
   const [doctors, setDoctors] = useState([]);
   const [treatmentTypes, setTreatmentTypes] = useState([]);
   const [bookedAppointments, setBookedAppointments] = useState([]);
+  const [vatPercentage, setVatPercentage] = useState("18");
 
   const [form, setForm] = useState({
     patientIdNumber: "",
@@ -96,7 +99,20 @@ function BookAppointment() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const today = new Date().toISOString().split("T")[0];
+  const formatLocalDate = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
+
+  const today = formatLocalDate(new Date());
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const minimumBookingDate = formatLocalDate(tomorrow);
 
   const selectedDoctor = isDoctor
     ? {
@@ -119,6 +135,15 @@ function BookAppointment() {
     form.date &&
     form.time;
 
+  const vatRate = Number(vatPercentage || 0);
+
+  const selectedTotalPrice = Number(selectedTreatment?.price || 0);
+
+  const selectedBasePrice =
+    vatRate > 0 ? selectedTotalPrice / (1 + vatRate / 100) : selectedTotalPrice;
+
+  const selectedVatAmount = selectedTotalPrice - selectedBasePrice;
+
   const timeToMinutes = (time) => {
     if (!time) return 0;
 
@@ -136,6 +161,18 @@ function BookAppointment() {
       2,
       "0",
     )}`;
+  };
+
+  const doesSlotEndAfterClosing = (slot) => {
+    if (!selectedTreatment) return false;
+
+    const startMinutes = timeToMinutes(slot);
+    const durationMinutes = Number(selectedTreatment.duration_minutes || 30);
+
+    const endMinutes = startMinutes + durationMinutes;
+    const closingMinutes = timeToMinutes(CLINIC_CLOSING_TIME);
+
+    return endMinutes > closingMinutes;
   };
 
   const isPastSlot = (slot) => {
@@ -185,12 +222,18 @@ function BookAppointment() {
   };
 
   const isSlotDisabled = (slot) => {
-    return isPastSlot(slot) || isSlotBooked(slot);
+    return (
+      isPastSlot(slot) || isSlotBooked(slot) || doesSlotEndAfterClosing(slot)
+    );
   };
 
   const getSlotLabel = (slot) => {
     if (isPastSlot(slot)) {
       return `${slot} - Past`;
+    }
+
+    if (doesSlotEndAfterClosing(slot)) {
+      return `${slot} - Exceeds clinic closing time`;
     }
 
     const conflict = getSlotConflict(slot);
@@ -223,9 +266,10 @@ function BookAppointment() {
       setError("");
 
       try {
-        const [doctorsRes, treatmentTypesRes] = await Promise.all([
+        const [doctorsRes, treatmentTypesRes, vatRes] = await Promise.all([
           api.get("/users/doctors"),
           api.get("/settings/treatment-types"),
+          api.get("/settings/vat"),
         ]);
 
         setDoctors(Array.isArray(doctorsRes.data) ? doctorsRes.data : []);
@@ -233,6 +277,8 @@ function BookAppointment() {
         setTreatmentTypes(
           Array.isArray(treatmentTypesRes.data) ? treatmentTypesRes.data : [],
         );
+
+        setVatPercentage(vatRes.data?.vat_percentage || "18");
       } catch (err) {
         console.log("Failed to load booking data", err.response?.data || err);
 
@@ -244,6 +290,7 @@ function BookAppointment() {
 
         setDoctors([]);
         setTreatmentTypes([]);
+        setVatPercentage("18");
       } finally {
         setLoadingData(false);
       }
@@ -327,7 +374,7 @@ function BookAppointment() {
 
     if (numericPrice <= 0) return "";
 
-    return ` - ₪${numericPrice}`;
+    return ` - ₪${numericPrice.toFixed(2)} including VAT`;
   };
 
   const getCancelPath = () => {
@@ -372,6 +419,16 @@ function BookAppointment() {
 
     if (!form.date || !form.time) {
       setError("Please select date and time");
+      return;
+    }
+
+    if (form.date < minimumBookingDate) {
+      setError("Appointments cannot be booked for the same day");
+      return;
+    }
+
+    if (doesSlotEndAfterClosing(form.time)) {
+      setError("The appointment must end before the clinic closes at 19:00");
       return;
     }
 
@@ -451,14 +508,6 @@ function BookAppointment() {
           <div className={styles.pageHeader}>
             <h1>Book Appointment</h1>
             <p>Schedule your next dental visit</p>
-
-            <button
-              type="button"
-              className={styles.backBtn}
-              onClick={() => navigate(-1)}
-            >
-              Back to My Schedule
-            </button>
           </div>
 
           <section className={styles.formCard}>
@@ -552,7 +601,7 @@ function BookAppointment() {
                   name="date"
                   value={form.date}
                   onChange={handleChange}
-                  min={today}
+                  min={minimumBookingDate}
                   required
                 />
               </div>
@@ -622,15 +671,29 @@ function BookAppointment() {
 
                   <p>
                     <strong>Date & Time:</strong>{" "}
-                    {new Date(form.date).toLocaleDateString("en-GB")} at{" "}
-                    {form.time}
+                    {new Date(`${form.date}T00:00:00`).toLocaleDateString(
+                      "en-GB",
+                    )}{" "}
+                    at {form.time}
                   </p>
 
-                  {Number(selectedTreatment?.price || 0) > 0 && (
-                    <p>
-                      <strong>Price:</strong> ₪
-                      {Number(selectedTreatment?.price || 0)}
-                    </p>
+                  {selectedTotalPrice > 0 && (
+                    <>
+                      <p>
+                        <strong>Price before VAT:</strong> ₪
+                        {selectedBasePrice.toFixed(2)}
+                      </p>
+
+                      <p>
+                        <strong>VAT ({vatRate}%):</strong> ₪
+                        {selectedVatAmount.toFixed(2)}
+                      </p>
+
+                      <p>
+                        <strong>Total including VAT:</strong> ₪
+                        {selectedTotalPrice.toFixed(2)}
+                      </p>
+                    </>
                   )}
                 </div>
               )}

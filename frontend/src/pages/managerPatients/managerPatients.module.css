@@ -226,6 +226,55 @@
   font-weight: 600;
 }
 
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.pageButton,
+.paginationArrow {
+  min-width: 36px;
+  height: 36px;
+  border: 1px solid #dddddd;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pageButton:hover,
+.paginationArrow:hover:not(:disabled) {
+  background: #f1f5f9;
+}
+
+.activePage {
+  border-color: #030217;
+  background: #030217;
+  color: #ffffff;
+}
+
+.activePage:hover {
+  background: #090827;
+}
+
+.paginationArrow {
+  font-size: 21px;
+  line-height: 1;
+}
+
+.paginationArrow:disabled {
+  color: #cbd5e1;
+  background: #f8fafc;
+  cursor: not-allowed;
+}
+
 .modalOverlay {
   position: fixed;
   inset: 0;
@@ -496,5 +545,9 @@
   .appointmentRight {
     align-items: flex-start;
     text-align: left;
+  }
+
+  .pagination {
+    flex-wrap: wrap;
   }
 }
