@@ -48,7 +48,19 @@ const addDays = (date, amount) => {
 const getDateKey = (date) => {
   if (!date) return "";
 
-  return String(date).split("T")[0];
+  const dateValue = String(date);
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+    return dateValue;
+  }
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "";
+  }
+
+  return toSqlDate(parsedDate);
 };
 
 const getShortDate = (date) => {
