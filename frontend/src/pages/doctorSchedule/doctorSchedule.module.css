@@ -158,6 +158,30 @@
   font-weight: 700;
 }
 
+.listDateTimeBox {
+  width: 110px;
+  min-width: 110px;
+  height: 58px;
+  border-radius: 9px;
+  background: #dbeafe;
+  color: #2563eb;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.listDateTimeBox strong {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.listDateTimeBox span {
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .appointmentInfo {
   flex: 1;
 }
@@ -210,6 +234,7 @@
   background: #fee2e2;
   color: #dc2626;
 }
+
 .headerRow {
   display: flex;
   align-items: flex-start;
@@ -257,6 +282,7 @@
     flex-direction: column;
     align-items: flex-start;
   }
+
   .headerRow {
     flex-direction: column;
     margin-bottom: 24px;
