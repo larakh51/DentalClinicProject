@@ -13,6 +13,7 @@ function DoctorSchedule() {
 
   const [appointments, setAppointments] = useState([]);
   const [viewMode, setViewMode] = useState("calendar");
+  const [updatingStatusId, setUpdatingStatusId] = useState(null);
 
   useEffect(() => {
     const loadSchedule = async () => {
@@ -128,6 +129,34 @@ function DoctorSchedule() {
     });
   };
 
+  const handleStatusChange = async (appointmentId, newStatus) => {
+    setUpdatingStatusId(appointmentId);
+
+    try {
+      await api.patch(`/appointments/${appointmentId}/status`, {
+        status: newStatus,
+      });
+
+      setAppointments((prev) =>
+        prev.map((appointment) =>
+          appointment.id === appointmentId
+            ? {
+                ...appointment,
+                status: newStatus,
+              }
+            : appointment,
+        ),
+      );
+    } catch (error) {
+      console.log(
+        "Failed to update appointment status",
+        error.response?.data || error,
+      );
+    } finally {
+      setUpdatingStatusId(null);
+    }
+  };
+
   return (
     <div className={styles.page}>
       <Sidebar />
@@ -208,13 +237,21 @@ function DoctorSchedule() {
                         <div className={styles.nameRow}>
                           <h3>{appointment.patient_name}</h3>
 
-                          <span
+                          <select
                             className={`${styles.status} ${
                               styles[appointment.status] || ""
                             }`}
+                            value={appointment.status}
+                            onChange={(e) =>
+                              handleStatusChange(appointment.id, e.target.value)
+                            }
+                            disabled={updatingStatusId === appointment.id}
                           >
-                            {appointment.status}
-                          </span>
+                            <option value="scheduled">scheduled</option>
+                            <option value="confirmed">confirmed</option>
+                            <option value="completed">completed</option>
+                            <option value="cancelled">cancelled</option>
+                          </select>
                         </div>
 
                         <p>{appointment.treatment_type}</p>
