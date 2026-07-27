@@ -34,6 +34,7 @@ function Profile() {
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
   const initials = `${user?.firstName?.[0] || ""}${user?.lastName?.[0] || ""}`;
 
@@ -82,6 +83,8 @@ function Profile() {
   };
 
   const handlePasswordInputChange = (e) => {
+    setPasswordError("");
+
     setPasswordForm({
       ...passwordForm,
       [e.target.name]: e.target.value,
@@ -169,11 +172,13 @@ function Profile() {
   const openPasswordModal = () => {
     setError("");
     setSuccess("");
+    setPasswordError("");
     setShowPasswordModal(true);
   };
 
   const closePasswordModal = () => {
     setShowPasswordModal(false);
+    setPasswordError("");
 
     setPasswordForm({
       currentPassword: "",
@@ -187,14 +192,19 @@ function Profile() {
 
     setError("");
     setSuccess("");
+    setPasswordError("");
 
-    if (passwordForm.newPassword.length < 6) {
-      setError("Password must be at least 6 characters");
+    const passwordPattern = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{6,8}$/;
+
+    if (!passwordPattern.test(passwordForm.newPassword)) {
+      setPasswordError(
+        "Password must be 6-8 characters and include letters, numbers, and at least one uppercase letter",
+      );
       return;
     }
 
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setError("Passwords do not match");
+      setPasswordError("Passwords do not match");
       return;
     }
 
@@ -211,7 +221,7 @@ function Profile() {
       closePasswordModal();
       setSuccess("Password changed successfully");
     } catch (err) {
-      setError(
+      setPasswordError(
         err.response?.data?.message ||
           err.response?.data?.error ||
           "Failed to change password",
@@ -477,6 +487,10 @@ function Profile() {
                   ×
                 </button>
               </div>
+
+              {passwordError && (
+                <div className={styles.errorBox}>{passwordError}</div>
+              )}
 
               <div className={styles.modalForm}>
                 <label>
