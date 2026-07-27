@@ -144,6 +144,11 @@
   height: 38px;
 }
 
+.datePickerWrapper,
+.datePickerWrapper > div {
+  width: 100%;
+}
+
 .field textarea {
   height: 64px;
   padding-top: 13px;
@@ -291,6 +296,7 @@
     padding: 24px 16px;
     max-width: 100%;
   }
+
   .backBtn {
     width: 100%;
   }

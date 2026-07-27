@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarDays } from "lucide-react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
@@ -71,6 +73,7 @@ const TIME_SLOTS = [
 ];
 
 const CLINIC_CLOSING_TIME = "19:00";
+const FRIDAY_CLOSING_TIME = "14:00";
 
 function BookAppointment() {
   const navigate = useNavigate();
@@ -163,14 +166,32 @@ function BookAppointment() {
     )}`;
   };
 
+  const getSelectedDay = () => {
+    if (!form.date) return null;
+
+    return new Date(`${form.date}T00:00:00`).getDay();
+  };
+
+  const isClinicClosedOnSelectedDate = () => {
+    return getSelectedDay() === 6;
+  };
+
+  const getClinicClosingTime = () => {
+    if (getSelectedDay() === 5) {
+      return FRIDAY_CLOSING_TIME;
+    }
+
+    return CLINIC_CLOSING_TIME;
+  };
+
   const doesSlotEndAfterClosing = (slot) => {
-    if (!selectedTreatment) return false;
+    if (!selectedTreatment || !form.date) return false;
 
     const startMinutes = timeToMinutes(slot);
     const durationMinutes = Number(selectedTreatment.duration_minutes || 30);
 
     const endMinutes = startMinutes + durationMinutes;
-    const closingMinutes = timeToMinutes(CLINIC_CLOSING_TIME);
+    const closingMinutes = timeToMinutes(getClinicClosingTime());
 
     return endMinutes > closingMinutes;
   };
@@ -223,11 +244,18 @@ function BookAppointment() {
 
   const isSlotDisabled = (slot) => {
     return (
-      isPastSlot(slot) || isSlotBooked(slot) || doesSlotEndAfterClosing(slot)
+      isClinicClosedOnSelectedDate() ||
+      isPastSlot(slot) ||
+      isSlotBooked(slot) ||
+      doesSlotEndAfterClosing(slot)
     );
   };
 
   const getSlotLabel = (slot) => {
+    if (isClinicClosedOnSelectedDate()) {
+      return `${slot} - Clinic closed on Saturday`;
+    }
+
     if (isPastSlot(slot)) {
       return `${slot} - Past`;
     }
@@ -352,8 +380,44 @@ function BookAppointment() {
     }
   }, [bookedAppointments, form.treatmentTypeId, form.date]);
 
+  const handleDateChange = (date) => {
+    if (date?.getDay() === 6) {
+      return;
+    }
+
+    if (error === "The clinic is closed on Saturday") {
+      setError("");
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      date: date ? formatLocalDate(date) : "",
+      time: "",
+    }));
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    if (name === "date" && value) {
+      const selectedDay = new Date(`${value}T00:00:00`).getDay();
+
+      if (selectedDay === 6) {
+        setError("The clinic is closed on Saturday");
+
+        setForm((prev) => ({
+          ...prev,
+          date: "",
+          time: "",
+        }));
+
+        return;
+      }
+
+      if (error === "The clinic is closed on Saturday") {
+        setError("");
+      }
+    }
 
     setForm((prev) => {
       const nextForm = {
@@ -427,8 +491,15 @@ function BookAppointment() {
       return;
     }
 
+    if (isClinicClosedOnSelectedDate()) {
+      setError("The clinic is closed on Saturday");
+      return;
+    }
+
     if (doesSlotEndAfterClosing(form.time)) {
-      setError("The appointment must end before the clinic closes at 19:00");
+      setError(
+        `The appointment must end before the clinic closes at ${getClinicClosingTime()}`,
+      );
       return;
     }
 
@@ -596,13 +667,17 @@ function BookAppointment() {
               <div className={styles.field}>
                 <label>Select Date *</label>
 
-                <input
-                  type="date"
+                <DatePicker
+                  selected={
+                    form.date ? new Date(`${form.date}T00:00:00`) : null
+                  }
+                  onChange={handleDateChange}
+                  minDate={new Date(`${minimumBookingDate}T00:00:00`)}
+                  filterDate={(date) => date.getDay() !== 6}
+                  dateFormat="yyyy-MM-dd"
                   name="date"
-                  value={form.date}
-                  onChange={handleChange}
-                  min={minimumBookingDate}
                   required
+                  wrapperClassName={styles.datePickerWrapper}
                 />
               </div>
 
