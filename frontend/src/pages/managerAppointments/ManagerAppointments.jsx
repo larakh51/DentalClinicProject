@@ -50,19 +50,41 @@ function ManagerAppointments() {
     setCurrentPage(1);
   }, [searchTerm, statusFilter, dateFilter]);
 
-  const formatDate = (date) => {
+  const formatInputDate = (date) => {
     if (!date) return "";
-    return new Date(date).toLocaleDateString("en-GB");
+
+    const dateValue = String(date);
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+      return dateValue;
+    }
+
+    const parsedDate = new Date(date);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+      return "";
+    }
+
+    const year = parsedDate.getFullYear();
+    const month = String(parsedDate.getMonth() + 1).padStart(2, "0");
+    const day = String(parsedDate.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatDate = (date) => {
+    const normalizedDate = formatInputDate(date);
+
+    if (!normalizedDate) return "";
+
+    const [year, month, day] = normalizedDate.split("-");
+
+    return `${day}/${month}/${year}`;
   };
 
   const formatTime = (time) => {
     if (!time) return "";
     return String(time).slice(0, 5);
-  };
-
-  const formatInputDate = (date) => {
-    if (!date) return "";
-    return String(date).split("T")[0];
   };
 
   const filteredAppointments = appointments.filter((appointment) => {
