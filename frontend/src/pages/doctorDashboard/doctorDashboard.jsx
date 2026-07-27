@@ -27,10 +27,7 @@ const toSqlDate = (date) => {
 const parseSqlDate = (value) => {
   if (!value) return null;
 
-  const [year, month, day] = String(value)
-    .split("T")[0]
-    .split("-")
-    .map(Number);
+  const [year, month, day] = String(value).split("T")[0].split("-").map(Number);
 
   if (!year || !month || !day) return null;
 
@@ -50,7 +47,19 @@ const addDays = (date, amount) => {
 const getDateKey = (date) => {
   if (!date) return "";
 
-  return String(date).split("T")[0];
+  const dateValue = String(date);
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+    return dateValue;
+  }
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "";
+  }
+
+  return toSqlDate(parsedDate);
 };
 
 const getShortDate = (date) => {
@@ -85,9 +94,7 @@ function DoctorDashboard() {
     toSqlDate(defaultCustomStartDate),
   );
 
-  const [customEndDate, setCustomEndDate] = useState(
-    toSqlDate(currentDate),
-  );
+  const [customEndDate, setCustomEndDate] = useState(toSqlDate(currentDate));
 
   const [chartAppointments, setChartAppointments] = useState([]);
   const [chartLoading, setChartLoading] = useState(false);
@@ -169,8 +176,7 @@ function DoctorDashboard() {
     if (appointmentPeriod === "week") {
       const currentDay = todayDate.getDay();
 
-      const distanceFromMonday =
-        currentDay === 0 ? -6 : 1 - currentDay;
+      const distanceFromMonday = currentDay === 0 ? -6 : 1 - currentDay;
 
       const start = addDays(todayDate, distanceFromMonday);
       const end = addDays(start, 4);
@@ -179,11 +185,7 @@ function DoctorDashboard() {
     }
 
     if (appointmentPeriod === "month") {
-      const start = new Date(
-        todayDate.getFullYear(),
-        todayDate.getMonth(),
-        1,
-      );
+      const start = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1);
 
       const end = new Date(
         todayDate.getFullYear(),
@@ -248,9 +250,7 @@ function DoctorDashboard() {
         });
 
         if (!ignoreResult) {
-          setChartAppointments(
-            Array.isArray(res.data) ? res.data : [],
-          );
+          setChartAppointments(Array.isArray(res.data) ? res.data : []);
         }
       } catch (error) {
         console.log("Failed to load doctor activity chart", error);
@@ -287,8 +287,7 @@ function DoctorDashboard() {
 
       if (!appointmentDate) return;
 
-      countsByDate[appointmentDate] =
-        (countsByDate[appointmentDate] || 0) + 1;
+      countsByDate[appointmentDate] = (countsByDate[appointmentDate] || 0) + 1;
     });
 
     const getCountBetweenDates = (startDate, endDate) => {
@@ -303,11 +302,7 @@ function DoctorDashboard() {
       return total;
     };
 
-    const buildDailyData = (
-      startDate,
-      endDate,
-      useWeekdayLabel,
-    ) => {
+    const buildDailyData = (startDate, endDate, useWeekdayLabel) => {
       const data = [];
       let cursor = new Date(startDate);
 
@@ -339,14 +334,10 @@ function DoctorDashboard() {
         const possibleEnd = addDays(bucketStart, 6);
 
         const bucketEnd =
-          possibleEnd > endDate
-            ? new Date(endDate)
-            : possibleEnd;
+          possibleEnd > endDate ? new Date(endDate) : possibleEnd;
 
         data.push({
-          label: `${getShortDate(bucketStart)}-${getShortDate(
-            bucketEnd,
-          )}`,
+          label: `${getShortDate(bucketStart)}-${getShortDate(bucketEnd)}`,
 
           count: getCountBetweenDates(bucketStart, bucketEnd),
         });
@@ -368,9 +359,7 @@ function DoctorDashboard() {
 
       while (monthCursor <= endDate) {
         const monthStart =
-          monthCursor < startDate
-            ? new Date(startDate)
-            : new Date(monthCursor);
+          monthCursor < startDate ? new Date(startDate) : new Date(monthCursor);
 
         const lastDayOfMonth = new Date(
           monthCursor.getFullYear(),
@@ -379,9 +368,7 @@ function DoctorDashboard() {
         );
 
         const monthEnd =
-          lastDayOfMonth > endDate
-            ? new Date(endDate)
-            : lastDayOfMonth;
+          lastDayOfMonth > endDate ? new Date(endDate) : lastDayOfMonth;
 
         data.push({
           label: monthCursor.toLocaleDateString("en-GB", {
@@ -403,11 +390,7 @@ function DoctorDashboard() {
     };
 
     if (appointmentPeriod === "week") {
-      return buildDailyData(
-        chartRange.start,
-        chartRange.end,
-        true,
-      );
+      return buildDailyData(chartRange.start, chartRange.end, true);
     }
 
     if (appointmentPeriod === "month") {
@@ -418,17 +401,10 @@ function DoctorDashboard() {
       return buildMonthlyData(chartRange.start, chartRange.end);
     }
 
-    const totalDays = getDaysBetween(
-      chartRange.start,
-      chartRange.end,
-    );
+    const totalDays = getDaysBetween(chartRange.start, chartRange.end);
 
     if (totalDays <= 14) {
-      return buildDailyData(
-        chartRange.start,
-        chartRange.end,
-        false,
-      );
+      return buildDailyData(chartRange.start, chartRange.end, false);
     }
 
     if (totalDays <= 90) {
@@ -443,10 +419,7 @@ function DoctorDashboard() {
     0,
   );
 
-  const yAxisMaximum = Math.max(
-    4,
-    Math.ceil(maximumAppointmentCount / 4) * 4,
-  );
+  const yAxisMaximum = Math.max(4, Math.ceil(maximumAppointmentCount / 4) * 4);
 
   const yAxisLabels = [
     yAxisMaximum,
@@ -469,21 +442,40 @@ function DoctorDashboard() {
       )} - ${chartRange.end.toLocaleDateString("en-GB")}`
     : "Select a valid date range";
 
-  const today = new Date().toISOString().split("T")[0];
+  const now = new Date();
+  const today = toSqlDate(now);
+
+  const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(
+    now.getMinutes(),
+  ).padStart(2, "0")}`;
 
   const todayAppointments = appointments.filter(
-    (appointment) => appointment.date === today,
+    (appointment) => getDateKey(appointment.date) === today,
   );
 
   const completedToday = todayAppointments.filter(
-    (appointment) => appointment.status === "completed",
+    (appointment) => String(appointment.status).toLowerCase() === "completed",
   );
 
-  const upcomingAppointments = appointments.filter(
-    (appointment) =>
-      appointment.status !== "completed" &&
-      appointment.status !== "cancelled",
-  );
+  const upcomingAppointments = appointments.filter((appointment) => {
+    const status = String(appointment.status || "").toLowerCase();
+    const appointmentDate = getDateKey(appointment.date);
+    const appointmentTime = String(appointment.time || "").slice(0, 5);
+
+    if (status === "completed" || status === "cancelled") {
+      return false;
+    }
+
+    if (appointmentDate > today) {
+      return true;
+    }
+
+    if (appointmentDate === today) {
+      return appointmentTime >= currentTime;
+    }
+
+    return false;
+  });
 
   const confirmedToday = todayAppointments.filter(
     (appointment) => appointment.status === "confirmed",
@@ -625,10 +617,7 @@ function DoctorDashboard() {
             ) : (
               <div className={styles.todayList}>
                 {todayAppointments.map((appointment) => (
-                  <div
-                    className={styles.todayItem}
-                    key={appointment.id}
-                  >
+                  <div className={styles.todayItem} key={appointment.id}>
                     <div>
                       <h3>{appointment.patient_name}</h3>
                       <p>{appointment.treatment_type}</p>
@@ -719,9 +708,7 @@ function DoctorDashboard() {
                 <select
                   className={styles.periodSelect}
                   value={appointmentPeriod}
-                  onChange={(event) =>
-                    setAppointmentPeriod(event.target.value)
-                  }
+                  onChange={(event) => setAppointmentPeriod(event.target.value)}
                 >
                   <option value="week">This Week</option>
                   <option value="month">This Month</option>
@@ -734,7 +721,6 @@ function DoctorDashboard() {
                 <div className={styles.customRange}>
                   <label>
                     From
-
                     <input
                       type="date"
                       value={customStartDate}
@@ -747,14 +733,11 @@ function DoctorDashboard() {
 
                   <label>
                     To
-
                     <input
                       type="date"
                       value={customEndDate}
                       min={customStartDate || undefined}
-                      onChange={(event) =>
-                        setCustomEndDate(event.target.value)
-                      }
+                      onChange={(event) => setCustomEndDate(event.target.value)}
                     />
                   </label>
                 </div>
@@ -934,9 +917,9 @@ function DoctorDashboard() {
 
                   <p>
                     {viewingAppointment.date
-                      ? new Date(
-                          viewingAppointment.date,
-                        ).toLocaleDateString("en-GB")
+                      ? new Date(viewingAppointment.date).toLocaleDateString(
+                          "en-GB",
+                        )
                       : "Not available"}
                   </p>
                 </div>
@@ -957,9 +940,7 @@ function DoctorDashboard() {
                   <span
                     className={`${styles.status} ${
                       styles[
-                        String(
-                          viewingAppointment.status || "",
-                        ).toLowerCase()
+                        String(viewingAppointment.status || "").toLowerCase()
                       ] || ""
                     }`}
                   >
@@ -967,25 +948,17 @@ function DoctorDashboard() {
                   </span>
                 </div>
 
-                <div
-                  className={`${styles.detailItem} ${styles.fullDetail}`}
-                >
+                <div className={`${styles.detailItem} ${styles.fullDetail}`}>
                   <span className={styles.detailLabel}>Treatment</span>
 
-                  <p>
-                    {viewingAppointment.treatment_type ||
-                      "Not available"}
-                  </p>
+                  <p>{viewingAppointment.treatment_type || "Not available"}</p>
                 </div>
 
-                <div
-                  className={`${styles.detailItem} ${styles.fullDetail}`}
-                >
+                <div className={`${styles.detailItem} ${styles.fullDetail}`}>
                   <span className={styles.detailLabel}>Notes</span>
 
                   <p className={styles.notesText}>
-                    {viewingAppointment.notes ||
-                      "No notes were added"}
+                    {viewingAppointment.notes || "No notes were added"}
                   </p>
                 </div>
               </div>
