@@ -175,8 +175,155 @@
   font-weight: 600;
 }
 
+.analyticsGrid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.chartBox {
+  min-height: 310px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  background: #ffffff;
+}
+
+.chartTitle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 24px;
+  color: #2563eb;
+}
+
+.chartTitle h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.chartTitle p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.monthlyChart {
+  height: 220px;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  align-items: end;
+  gap: 12px;
+}
+
+.monthColumn {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.monthValue {
+  margin-bottom: 7px;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.monthBarTrack {
+  width: 100%;
+  max-width: 46px;
+  height: 160px;
+  border-radius: 8px 8px 0 0;
+  background: #eff6ff;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.monthBar {
+  width: 100%;
+  background: #2563eb;
+  border-radius: 8px 8px 0 0;
+  transition: height 0.25s ease;
+}
+
+.monthLabel {
+  margin: 9px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.statusList {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.statusRow {
+  width: 100%;
+}
+
+.statusTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.statusTop span {
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.statusTop strong {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.statusTrack {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.statusFill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+.scheduledBar {
+  background: #2563eb;
+}
+
+.confirmedBar {
+  background: #10b981;
+}
+
+.completedBar {
+  background: #8b5cf6;
+}
+
+.cancelledBar {
+  background: #ef4444;
+}
+
 @media (max-width: 900px) {
   .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .analyticsGrid {
     grid-template-columns: 1fr;
   }
 }
@@ -184,5 +331,17 @@
 @media (max-width: 650px) {
   .content {
     padding: 24px 16px;
+  }
+
+  .chartBox {
+    padding: 16px;
+  }
+
+  .monthlyChart {
+    gap: 7px;
+  }
+
+  .monthBarTrack {
+    max-width: 34px;
   }
 }
