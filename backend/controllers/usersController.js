@@ -398,12 +398,6 @@ const changePassword = async (req, res) => {
       });
     }
 
-    if (newPassword.length < 6) {
-      return res.status(400).json({
-        message: "Password must be at least 6 characters",
-      });
-    }
-
     const [users] = await pool.query(
       "SELECT id, password FROM users WHERE id = ?",
       [id],
@@ -420,6 +414,15 @@ const changePassword = async (req, res) => {
     if (!isMatch) {
       return res.status(400).json({
         message: "Current password is incorrect",
+      });
+    }
+
+    const passwordPattern = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{6,8}$/;
+
+    if (!passwordPattern.test(newPassword)) {
+      return res.status(400).json({
+        message:
+          "Password must be 6-8 characters and include letters, numbers, and at least one uppercase letter",
       });
     }
 
