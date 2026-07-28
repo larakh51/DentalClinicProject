@@ -8,6 +8,15 @@ import styles from "./managerFinance.module.css";
 
 const INVOICES_PER_PAGE = 7;
 
+const getTodayDate = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
 function ManagerFinance() {
   const { user } = useAuth();
 
@@ -23,27 +32,39 @@ function ManagerFinance() {
 
   const [error, setError] = useState("");
 
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+
+  const [paymentForm, setPaymentForm] = useState({
+    amount: "",
+    paymentMethod: "cash",
+    date: "",
+  });
+
+  const [paymentError, setPaymentError] = useState("");
+  const [savingPayment, setSavingPayment] = useState(false);
+
+  const loadFinanceData = async () => {
+    try {
+      const [invoicesRes, statsRes] = await Promise.all([
+        api.get("/invoices"),
+        api.get("/invoices/finance-stats"),
+      ]);
+
+      setInvoices(invoicesRes.data || []);
+      setStats(statsRes.data || {});
+      setError("");
+    } catch (err) {
+      console.log("Failed to load finance data", err.response?.data || err);
+
+      setError(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Failed to load finance data",
+      );
+    }
+  };
+
   useEffect(() => {
-    const loadFinanceData = async () => {
-      try {
-        const [invoicesRes, statsRes] = await Promise.all([
-          api.get("/invoices"),
-          api.get("/invoices/finance-stats"),
-        ]);
-
-        setInvoices(invoicesRes.data || []);
-        setStats(statsRes.data || {});
-      } catch (err) {
-        console.log("Failed to load finance data", err.response?.data || err);
-
-        setError(
-          err.response?.data?.error ||
-            err.response?.data?.message ||
-            "Failed to load finance data",
-        );
-      }
-    };
-
     loadFinanceData();
   }, []);
 
@@ -54,6 +75,64 @@ function ManagerFinance() {
   const formatDate = (date) => {
     if (!date) return "";
     return new Date(date).toLocaleDateString("en-GB");
+  };
+
+  const openPaymentModal = (invoice) => {
+    setSelectedInvoice(invoice);
+
+    setPaymentForm({
+      amount: "",
+      paymentMethod: "cash",
+      date: getTodayDate(),
+    });
+
+    setPaymentError("");
+  };
+
+  const closePaymentModal = () => {
+    if (savingPayment) return;
+
+    setSelectedInvoice(null);
+    setPaymentError("");
+  };
+
+  const handlePaymentSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!selectedInvoice) return;
+
+    const amount = Number(paymentForm.amount);
+
+    if (!amount || amount <= 0) {
+      setPaymentError("Enter a valid payment amount");
+      return;
+    }
+
+    setSavingPayment(true);
+    setPaymentError("");
+
+    try {
+      await api.post(`/invoices/${selectedInvoice.id}/payments`, {
+        patientId: selectedInvoice.patient_id,
+        amount,
+        paymentMethod: paymentForm.paymentMethod,
+        date: paymentForm.date,
+      });
+
+      await loadFinanceData();
+
+      setSelectedInvoice(null);
+    } catch (err) {
+      console.log("Failed to save payment", err.response?.data || err);
+
+      setPaymentError(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Failed to save payment",
+      );
+    } finally {
+      setSavingPayment(false);
+    }
   };
 
   const filteredInvoices = invoices.filter((invoice) => {
@@ -183,13 +262,26 @@ function ManagerFinance() {
 
                     <span>₪{invoice.amount}</span>
 
-                    <span
-                      className={`${styles.status} ${
-                        styles[invoice.status] || ""
-                      }`}
-                    >
-                      {invoice.status}
-                    </span>
+                    <div className={styles.statusCell}>
+                      <span
+                        className={`${styles.status} ${
+                          styles[invoice.status] || ""
+                        }`}
+                      >
+                        {invoice.status}
+                      </span>
+
+                      {invoice.status !== "paid" &&
+                        invoice.status !== "cancelled" && (
+                          <button
+                            type="button"
+                            className={styles.paymentButton}
+                            onClick={() => openPaymentModal(invoice)}
+                          >
+                            Record Payment
+                          </button>
+                        )}
+                    </div>
                   </div>
                 ))
               )}
@@ -240,6 +332,121 @@ function ManagerFinance() {
               </div>
             )}
           </section>
+
+          {selectedInvoice && (
+            <div className={styles.modalOverlay} onClick={closePaymentModal}>
+              <div
+                className={styles.paymentModal}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className={styles.modalHeader}>
+                  <div>
+                    <h2>Record Payment</h2>
+                    <p>
+                      Invoice #{selectedInvoice.id} —{" "}
+                      {selectedInvoice.patient_name}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    className={styles.closeButton}
+                    onClick={closePaymentModal}
+                    disabled={savingPayment}
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {paymentError && (
+                  <div className={styles.paymentError}>{paymentError}</div>
+                )}
+
+                <form
+                  className={styles.paymentForm}
+                  onSubmit={handlePaymentSubmit}
+                >
+                  <label>
+                    Invoice Amount
+                    <input
+                      type="text"
+                      value={`₪${selectedInvoice.amount}`}
+                      disabled
+                    />
+                  </label>
+
+                  <label>
+                    Payment Amount
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={paymentForm.amount}
+                      onChange={(e) =>
+                        setPaymentForm((prev) => ({
+                          ...prev,
+                          amount: e.target.value,
+                        }))
+                      }
+                      required
+                    />
+                  </label>
+
+                  <label>
+                    Payment Method
+                    <select
+                      value={paymentForm.paymentMethod}
+                      onChange={(e) =>
+                        setPaymentForm((prev) => ({
+                          ...prev,
+                          paymentMethod: e.target.value,
+                        }))
+                      }
+                      required
+                    >
+                      <option value="cash">Cash</option>
+                      <option value="card">Card</option>
+                      <option value="bank_transfer">Bank Transfer</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    Payment Date
+                    <input
+                      type="date"
+                      value={paymentForm.date}
+                      onChange={(e) =>
+                        setPaymentForm((prev) => ({
+                          ...prev,
+                          date: e.target.value,
+                        }))
+                      }
+                      required
+                    />
+                  </label>
+
+                  <div className={styles.modalActions}>
+                    <button
+                      type="button"
+                      className={styles.cancelButton}
+                      onClick={closePaymentModal}
+                      disabled={savingPayment}
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="submit"
+                      className={styles.savePaymentButton}
+                      disabled={savingPayment}
+                    >
+                      {savingPayment ? "Saving..." : "Save Payment"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </section>
       </main>
     </div>

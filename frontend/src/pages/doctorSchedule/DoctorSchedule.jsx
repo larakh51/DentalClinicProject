@@ -7,6 +7,15 @@ import api from "../../services/api";
 import Sidebar from "../../components/sidebar/Sidebar";
 import styles from "./doctorSchedule.module.css";
 
+const getTodayDate = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
 function DoctorSchedule() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -14,6 +23,17 @@ function DoctorSchedule() {
   const [appointments, setAppointments] = useState([]);
   const [viewMode, setViewMode] = useState("calendar");
   const [updatingStatusId, setUpdatingStatusId] = useState(null);
+
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [loadingPaymentId, setLoadingPaymentId] = useState(null);
+  const [savingPayment, setSavingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
+
+  const [paymentForm, setPaymentForm] = useState({
+    amount: "",
+    paymentMethod: "cash",
+    date: "",
+  });
 
   useEffect(() => {
     const loadSchedule = async () => {
@@ -171,6 +191,145 @@ function DoctorSchedule() {
     }
   };
 
+  const openPaymentModal = async (appointment) => {
+    if (!appointment.patient_id) {
+      window.alert("Patient ID is missing from appointment data");
+      return;
+    }
+
+    setLoadingPaymentId(appointment.id);
+
+    try {
+      const res = await api.post(`/invoices/appointment/${appointment.id}`);
+
+      const invoice = res.data?.invoice;
+
+      if (!invoice) {
+        window.alert("Failed to prepare treatment invoice");
+        return;
+      }
+
+      const remainingAmount = Number(
+        invoice.remaining_amount ?? invoice.amount ?? 0,
+      );
+
+      if (
+        String(invoice.status || "").toLowerCase() === "paid" ||
+        remainingAmount <= 0
+      ) {
+        window.alert("This treatment is already fully paid");
+        return;
+      }
+
+      setSelectedInvoice(invoice);
+
+      setPaymentForm({
+        amount: "",
+        paymentMethod: "cash",
+        date: getTodayDate(),
+      });
+
+      setPaymentError("");
+    } catch (error) {
+      console.log(
+        "Failed to prepare treatment invoice",
+        error.response?.data || error,
+      );
+
+      window.alert(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Failed to prepare treatment invoice",
+      );
+    } finally {
+      setLoadingPaymentId(null);
+    }
+  };
+
+  const closePaymentModal = () => {
+    if (savingPayment) return;
+
+    setSelectedInvoice(null);
+    setPaymentError("");
+  };
+
+  const handlePaymentSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!selectedInvoice) return;
+
+    const amount = Number(paymentForm.amount);
+
+    const remainingAmount = Number(
+      selectedInvoice.remaining_amount ?? selectedInvoice.amount ?? 0,
+    );
+
+    if (!amount || amount <= 0) {
+      setPaymentError("Enter a valid payment amount");
+      return;
+    }
+
+    if (amount > remainingAmount) {
+      setPaymentError(
+        `Payment amount cannot exceed ₪${remainingAmount.toFixed(2)}`,
+      );
+      return;
+    }
+
+    setSavingPayment(true);
+    setPaymentError("");
+
+    try {
+      await api.post(`/invoices/${selectedInvoice.id}/payments`, {
+        patientId: selectedInvoice.patient_id,
+        amount,
+        paymentMethod: paymentForm.paymentMethod,
+        date: paymentForm.date,
+      });
+
+      setSelectedInvoice(null);
+    } catch (error) {
+      console.log("Failed to save payment", error.response?.data || error);
+
+      setPaymentError(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Failed to save payment",
+      );
+    } finally {
+      setSavingPayment(false);
+    }
+  };
+
+  const renderAppointmentActions = (appointment) => (
+    <div className={styles.appointmentActions}>
+      <select
+        className={`${styles.status} ${styles[appointment.status] || ""}`}
+        value={appointment.status}
+        onChange={(e) => handleStatusChange(appointment.id, e.target.value)}
+        disabled={updatingStatusId === appointment.id}
+      >
+        <option value="scheduled">scheduled</option>
+        <option value="confirmed">confirmed</option>
+        <option value="completed">completed</option>
+        <option value="cancelled">cancelled</option>
+      </select>
+
+      {String(appointment.status || "").toLowerCase() === "completed" && (
+        <button
+          type="button"
+          className={styles.paymentButton}
+          onClick={() => openPaymentModal(appointment)}
+          disabled={loadingPaymentId === appointment.id}
+        >
+          {loadingPaymentId === appointment.id
+            ? "Loading..."
+            : "Record Payment"}
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <div className={styles.page}>
       <Sidebar />
@@ -251,25 +410,7 @@ function DoctorSchedule() {
                         <div className={styles.appointmentInfo}>
                           <div className={styles.nameRow}>
                             <h3>{appointment.patient_name}</h3>
-
-                            <select
-                              className={`${styles.status} ${
-                                styles[appointment.status] || ""
-                              }`}
-                              value={appointment.status}
-                              onChange={(e) =>
-                                handleStatusChange(
-                                  appointment.id,
-                                  e.target.value,
-                                )
-                              }
-                              disabled={updatingStatusId === appointment.id}
-                            >
-                              <option value="scheduled">scheduled</option>
-                              <option value="confirmed">confirmed</option>
-                              <option value="completed">completed</option>
-                              <option value="cancelled">cancelled</option>
-                            </select>
+                            {renderAppointmentActions(appointment)}
                           </div>
 
                           <p>{appointment.treatment_type}</p>
@@ -297,22 +438,7 @@ function DoctorSchedule() {
                       <div className={styles.appointmentInfo}>
                         <div className={styles.nameRow}>
                           <h3>{appointment.patient_name}</h3>
-
-                          <select
-                            className={`${styles.status} ${
-                              styles[appointment.status] || ""
-                            }`}
-                            value={appointment.status}
-                            onChange={(e) =>
-                              handleStatusChange(appointment.id, e.target.value)
-                            }
-                            disabled={updatingStatusId === appointment.id}
-                          >
-                            <option value="scheduled">scheduled</option>
-                            <option value="confirmed">confirmed</option>
-                            <option value="completed">completed</option>
-                            <option value="cancelled">cancelled</option>
-                          </select>
+                          {renderAppointmentActions(appointment)}
                         </div>
 
                         <p>{appointment.treatment_type}</p>
@@ -321,6 +447,129 @@ function DoctorSchedule() {
                   ))}
                 </div>
               </section>
+            </div>
+          )}
+
+          {selectedInvoice && (
+            <div className={styles.modalOverlay} onClick={closePaymentModal}>
+              <div
+                className={styles.paymentModal}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className={styles.modalHeader}>
+                  <div>
+                    <h2>Record Payment</h2>
+
+                    <p>
+                      {selectedInvoice.patient_name} —{" "}
+                      {selectedInvoice.treatment_type}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    className={styles.closeButton}
+                    onClick={closePaymentModal}
+                    disabled={savingPayment}
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {paymentError && (
+                  <div className={styles.paymentError}>{paymentError}</div>
+                )}
+
+                <form
+                  className={styles.paymentForm}
+                  onSubmit={handlePaymentSubmit}
+                >
+                  <label>
+                    Treatment Price
+                    <input
+                      type="text"
+                      value={`₪${Number(selectedInvoice.amount || 0).toFixed(
+                        2,
+                      )}`}
+                      disabled
+                    />
+                  </label>
+
+                  <label>
+                    Payment Amount
+                    <input
+                      type="number"
+                      min="0.01"
+                      max={Number(
+                        selectedInvoice.remaining_amount ??
+                          selectedInvoice.amount ??
+                          0,
+                      )}
+                      step="0.01"
+                      value={paymentForm.amount}
+                      onChange={(e) =>
+                        setPaymentForm((prev) => ({
+                          ...prev,
+                          amount: e.target.value,
+                        }))
+                      }
+                      required
+                    />
+                  </label>
+
+                  <label>
+                    Payment Method
+                    <select
+                      value={paymentForm.paymentMethod}
+                      onChange={(e) =>
+                        setPaymentForm((prev) => ({
+                          ...prev,
+                          paymentMethod: e.target.value,
+                        }))
+                      }
+                      required
+                    >
+                      <option value="cash">Cash</option>
+                      <option value="card">Card</option>
+                      <option value="bank_transfer">Bank Transfer</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    Payment Date
+                    <input
+                      type="date"
+                      value={paymentForm.date}
+                      onChange={(e) =>
+                        setPaymentForm((prev) => ({
+                          ...prev,
+                          date: e.target.value,
+                        }))
+                      }
+                      required
+                    />
+                  </label>
+
+                  <div className={styles.modalActions}>
+                    <button
+                      type="button"
+                      className={styles.cancelButton}
+                      onClick={closePaymentModal}
+                      disabled={savingPayment}
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="submit"
+                      className={styles.savePaymentButton}
+                      disabled={savingPayment}
+                    >
+                      {savingPayment ? "Saving..." : "Save Payment"}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           )}
         </section>
