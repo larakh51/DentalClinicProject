@@ -1,4 +1,8 @@
 const pool = require("../database/db");
+const {
+  AppointmentStatusError,
+  changeAppointmentStatus,
+} = require("../services/appointmentStatusService");
 
 const formatSqlDate = (date) => {
   if (!date) return "";
@@ -477,187 +481,30 @@ const updateAppointment = async (req, res) => {
 };
 
 const updateAppointmentStatus = async (req, res) => {
-  const connection = await pool.getConnection();
-
   try {
-    await connection.beginTransaction();
+    const appointment = await changeAppointmentStatus({
+      database: pool,
+      appointmentId: req.params.id,
+      nextStatus: req.body.status,
+      actor: req.user,
+    });
 
-    const { id } = req.params;
-    const { status } = req.body;
-
-    const allowedStatuses = [
-      "scheduled",
-      "completed",
-      "cancelled",
-      "confirmed",
-    ];
-
-    if (!allowedStatuses.includes(status)) {
-      await connection.rollback();
-
-      return res.status(400).json({
-        message: "Invalid appointment status",
-      });
-    }
-
-    const [appointments] = await connection.query(
-      `
-      SELECT
-        a.id,
-        a.patient_id,
-        a.doctor_id,
-        a.date,
-        a.treatment_type,
-
-        COALESCE(
-          a.patient_name,
-          CONCAT(patient.first_name, ' ', patient.last_name)
-        ) AS patient_name,
-
-        COALESCE(
-          (
-            SELECT treatmentType.price
-            FROM treatment_types treatmentType
-            WHERE treatmentType.id = a.treatment_type_id
-            LIMIT 1
-          ),
-          (
-            SELECT treatmentType.price
-            FROM treatment_types treatmentType
-            WHERE treatmentType.name = a.treatment_type
-            LIMIT 1
-          ),
-          0
-        ) AS treatment_cost
-
-      FROM appointments a
-
-      LEFT JOIN users patient
-        ON a.patient_id = patient.id
-
-      WHERE a.id = ?
-
-      LIMIT 1
-      `,
-      [id],
-    );
-
-    if (appointments.length === 0) {
-      await connection.rollback();
-
-      return res.status(404).json({
-        message: "Appointment not found",
-      });
-    }
-
-    const appointment = appointments[0];
-
-    await connection.query(
-      `UPDATE appointments
-       SET status = ?
-       WHERE id = ?`,
-      [status, id],
-    );
-
-    if (status === "completed") {
-      const treatmentCost = Number(appointment.treatment_cost || 0);
-
-      if (!Number.isFinite(treatmentCost) || treatmentCost <= 0) {
-        await connection.rollback();
-
-        return res.status(400).json({
-          message: "No valid price was found for this treatment",
-        });
-      }
-
-      const [existingTreatments] = await connection.query(
-        `SELECT id
-         FROM treatments
-         WHERE appointment_id = ?
-         LIMIT 1`,
-        [appointment.id],
-      );
-
-      if (existingTreatments.length === 0) {
-        const treatmentId = `t${Date.now()}`;
-
-        await connection.query(
-          `INSERT INTO treatments
-           (
-             id,
-             appointment_id,
-             patient_id,
-             doctor_id,
-             description,
-             materials,
-             cost,
-             date
-           )
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            treatmentId,
-            appointment.id,
-            appointment.patient_id,
-            appointment.doctor_id,
-            appointment.treatment_type,
-            null,
-            treatmentCost,
-            appointment.date,
-          ],
-        );
-      }
-
-      const [existingInvoices] = await connection.query(
-        `SELECT id
-         FROM invoices
-         WHERE appointment_id = ?
-         LIMIT 1`,
-        [appointment.id],
-      );
-
-      if (existingInvoices.length === 0) {
-        const invoiceId = `inv${Date.now()}`;
-
-        await connection.query(
-          `INSERT INTO invoices
-           (
-             id,
-             appointment_id,
-             patient_id,
-             patient_name,
-             date,
-             amount,
-             status
-           )
-           VALUES (?, ?, ?, ?, ?, ?, 'unpaid')`,
-          [
-            invoiceId,
-            appointment.id,
-            appointment.patient_id,
-            appointment.patient_name,
-            appointment.date,
-            treatmentCost,
-          ],
-        );
-      }
-    }
-
-    await connection.commit();
-
-    res.json({
+    return res.json({
       message: "Appointment status updated successfully",
+      appointment,
     });
   } catch (error) {
-    await connection.rollback();
+    if (error instanceof AppointmentStatusError) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
 
     console.error("UPDATE APPOINTMENT STATUS ERROR:", error);
 
-    res.status(500).json({
-      message: "Failed to update status",
-      error: error.sqlMessage || error.message,
+    return res.status(500).json({
+      message: "Failed to update appointment status",
     });
-  } finally {
-    connection.release();
   }
 };
 
