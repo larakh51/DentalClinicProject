@@ -22,7 +22,9 @@ function DoctorSchedule() {
 
   const [appointments, setAppointments] = useState([]);
   const [viewMode, setViewMode] = useState("calendar");
-  const [updatingStatusId, setUpdatingStatusId] = useState(null);
+  const [statusRequests, setStatusRequests] = useState({});
+  const [scheduleError, setScheduleError] = useState("");
+  const [loadingSchedule, setLoadingSchedule] = useState(false);
 
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [loadingPaymentId, setLoadingPaymentId] = useState(null);
@@ -35,95 +37,49 @@ function DoctorSchedule() {
     date: "",
   });
 
+  const loadSchedule = async () => {
+    if (!user?.id) return;
+
+    setLoadingSchedule(true);
+    setScheduleError("");
+
+    try {
+      const res = await api.get(`/appointments?doctorId=${user.id}`);
+      setAppointments(res.data || []);
+    } catch (error) {
+      console.log("Failed to load doctor schedule", error);
+      setAppointments([]);
+      setScheduleError("Failed to load doctor schedule");
+    } finally {
+      setLoadingSchedule(false);
+    }
+  };
+
   useEffect(() => {
-    const loadSchedule = async () => {
-      if (!user?.id) return;
+    if (!user?.id) return undefined;
 
-      try {
-        const res = await api.get(`/appointments?doctorId=${user.id}`);
+    let isActive = true;
+
+    api
+      .get(`/appointments?doctorId=${user.id}`)
+      .then((res) => {
+        if (!isActive) return;
+
         setAppointments(res.data || []);
-      } catch (error) {
+        setScheduleError("");
+      })
+      .catch((error) => {
+        if (!isActive) return;
+
         console.log("Failed to load doctor schedule", error);
+        setAppointments([]);
+        setScheduleError("Failed to load doctor schedule");
+      });
 
-        setAppointments([
-          {
-            id: "a1",
-            date: "2026-02-10",
-            time: "11:30",
-            patient_name: "Tamar Weiss",
-            treatment_type: "Whitening",
-            status: "completed",
-          },
-          {
-            id: "a2",
-            date: "2026-03-16",
-            time: "15:00",
-            patient_name: "Yael Friedman",
-            treatment_type: "Consultation",
-            status: "completed",
-          },
-          {
-            id: "a3",
-            date: "2026-03-20",
-            time: "09:00",
-            patient_name: "Michael Rosenberg",
-            treatment_type: "Consultation",
-            status: "completed",
-          },
-          {
-            id: "a4",
-            date: "2026-03-21",
-            time: "11:00",
-            patient_name: "Rina Shalev",
-            treatment_type: "Filling",
-            status: "completed",
-          },
-          {
-            id: "a5",
-            date: "2026-03-26",
-            time: "10:00",
-            patient_name: "Sarah Cohen",
-            treatment_type: "Cleaning & Check-up",
-            status: "confirmed",
-          },
-          {
-            id: "a6",
-            date: "2026-03-26",
-            time: "14:00",
-            patient_name: "Michael Rosenberg",
-            treatment_type: "Root Canal",
-            status: "scheduled",
-          },
-          {
-            id: "a7",
-            date: "2026-03-27",
-            time: "10:30",
-            patient_name: "Noa Shapiro",
-            treatment_type: "Orthodontic Consultation",
-            status: "scheduled",
-          },
-          {
-            id: "a8",
-            date: "2026-03-28",
-            time: "11:00",
-            patient_name: "Avi Mizrahi",
-            treatment_type: "Emergency - Toothache",
-            status: "confirmed",
-          },
-          {
-            id: "a9",
-            date: "2026-03-30",
-            time: "10:00",
-            patient_name: "Amir Peretz",
-            treatment_type: "Cleaning & Check-up",
-            status: "scheduled",
-          },
-        ]);
-      }
+    return () => {
+      isActive = false;
     };
-
-    loadSchedule();
-  }, [user]);
+  }, [user?.id]);
 
   const groupedAppointments = appointments.reduce((groups, appointment) => {
     const date = appointment.date;
@@ -163,20 +119,42 @@ function DoctorSchedule() {
     return new Date(date).toLocaleDateString("en-GB");
   };
 
+  const updateStatusRequest = (appointmentId, values) => {
+    setStatusRequests((prev) => ({
+      ...prev,
+      [appointmentId]: {
+        ...prev[appointmentId],
+        ...values,
+      },
+    }));
+  };
+
   const handleStatusChange = async (appointmentId, newStatus) => {
-    setUpdatingStatusId(appointmentId);
+    updateStatusRequest(appointmentId, {
+      saving: true,
+      error: "",
+    });
 
     try {
-      await api.patch(`/appointments/${appointmentId}/status`, {
-        status: newStatus,
-      });
+      const res = await api.patch(
+        `/appointments/${appointmentId}/status`,
+        {
+          status: newStatus,
+        },
+      );
+
+      const confirmedStatus = res.data?.appointment?.status;
+
+      if (!confirmedStatus) {
+        throw new Error("Status response is missing the appointment");
+      }
 
       setAppointments((prev) =>
         prev.map((appointment) =>
           appointment.id === appointmentId
             ? {
                 ...appointment,
-                status: newStatus,
+                status: confirmedStatus,
               }
             : appointment,
         ),
@@ -186,8 +164,16 @@ function DoctorSchedule() {
         "Failed to update appointment status",
         error.response?.data || error,
       );
+
+      updateStatusRequest(appointmentId, {
+        error:
+          error.response?.data?.message ||
+          "Failed to update appointment status",
+      });
     } finally {
-      setUpdatingStatusId(null);
+      updateStatusRequest(appointmentId, {
+        saving: false,
+      });
     }
   };
 
@@ -301,34 +287,62 @@ function DoctorSchedule() {
     }
   };
 
-  const renderAppointmentActions = (appointment) => (
-    <div className={styles.appointmentActions}>
-      <select
-        className={`${styles.status} ${styles[appointment.status] || ""}`}
-        value={appointment.status}
-        onChange={(e) => handleStatusChange(appointment.id, e.target.value)}
-        disabled={updatingStatusId === appointment.id}
-      >
-        <option value="scheduled">scheduled</option>
-        <option value="confirmed">confirmed</option>
-        <option value="completed">completed</option>
-        <option value="cancelled">cancelled</option>
-      </select>
+  const renderAppointmentActions = (appointment) => {
+    const requestState = statusRequests[appointment.id] || {};
+    const statusErrorId = `appointment-status-error-${appointment.id}`;
+    const isCompleted =
+      String(appointment.status || "").toLowerCase() === "completed";
 
-      {String(appointment.status || "").toLowerCase() === "completed" && (
-        <button
-          type="button"
-          className={styles.paymentButton}
-          onClick={() => openPaymentModal(appointment)}
-          disabled={loadingPaymentId === appointment.id}
-        >
-          {loadingPaymentId === appointment.id
-            ? "Loading..."
-            : "Record Payment"}
-        </button>
-      )}
-    </div>
-  );
+    return (
+      <div className={styles.appointmentActions}>
+        <div className={styles.statusControl}>
+          <select
+            className={`${styles.status} ${styles[appointment.status] || ""}`}
+            value={appointment.status}
+            onChange={(e) =>
+              handleStatusChange(appointment.id, e.target.value)
+            }
+            disabled={requestState.saving || isCompleted}
+            aria-describedby={
+              requestState.error ? statusErrorId : undefined
+            }
+          >
+            <option value="scheduled">scheduled</option>
+            <option value="confirmed">confirmed</option>
+            <option value="completed">completed</option>
+            <option value="cancelled">cancelled</option>
+          </select>
+
+          {requestState.saving && (
+            <span className={styles.statusSaving}>Saving...</span>
+          )}
+
+          {requestState.error && (
+            <span
+              className={styles.statusError}
+              id={statusErrorId}
+              role="alert"
+            >
+              {requestState.error}
+            </span>
+          )}
+        </div>
+
+        {isCompleted && (
+          <button
+            type="button"
+            className={styles.paymentButton}
+            onClick={() => openPaymentModal(appointment)}
+            disabled={loadingPaymentId === appointment.id}
+          >
+            {loadingPaymentId === appointment.id
+              ? "Loading..."
+              : "Record Payment"}
+          </button>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className={styles.page}>
@@ -383,7 +397,21 @@ function DoctorSchedule() {
             </button>
           </div>
 
-          {viewMode === "calendar" ? (
+          {scheduleError && (
+            <div className={styles.scheduleError} role="alert">
+              <p>{scheduleError}</p>
+              <button
+                type="button"
+                className={styles.retryButton}
+                onClick={loadSchedule}
+                disabled={loadingSchedule}
+              >
+                {loadingSchedule ? "Retrying..." : "Retry"}
+              </button>
+            </div>
+          )}
+
+          {!scheduleError && (viewMode === "calendar" ? (
             <div className={styles.scheduleList}>
               {sortedDates.map((date) => (
                 <section className={styles.dateCard} key={date}>
@@ -448,7 +476,7 @@ function DoctorSchedule() {
                 </div>
               </section>
             </div>
-          )}
+          ))}
 
           {selectedInvoice && (
             <div className={styles.modalOverlay} onClick={closePaymentModal}>
