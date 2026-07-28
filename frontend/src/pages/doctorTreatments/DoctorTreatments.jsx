@@ -53,7 +53,7 @@ function DoctorTreatments() {
 
     const description = String(treatment.description || "").toLowerCase();
     const materials = String(treatment.materials || "").toLowerCase();
-    const date = formatDate(treatment.treatment_date).toLowerCase();
+    const date = formatDate(treatment.date).toLowerCase();
     const cost = String(treatment.cost || "").toLowerCase();
 
     return (
@@ -129,7 +129,7 @@ function DoctorTreatments() {
 
                         <div className={styles.dateRow}>
                           <CalendarDays size={17} />
-                          <span>{formatDate(treatment.treatment_date)}</span>
+                          <span>{formatDate(treatment.date)}</span>{" "}
                         </div>
 
                         <p>
