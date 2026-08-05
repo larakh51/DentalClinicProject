@@ -136,12 +136,9 @@ function DoctorSchedule() {
     });
 
     try {
-      const res = await api.patch(
-        `/appointments/${appointmentId}/status`,
-        {
-          status: newStatus,
-        },
-      );
+      const res = await api.patch(`/appointments/${appointmentId}/status`, {
+        status: newStatus,
+      });
 
       const confirmedStatus = res.data?.appointment?.status;
 
@@ -287,6 +284,24 @@ function DoctorSchedule() {
     }
   };
 
+  const canCompleteAppointment = (appointment) => {
+    if (!appointment?.date || !appointment?.time) {
+      return false;
+    }
+
+    const appointmentDate = String(appointment.date).split("T")[0];
+    const appointmentTime = String(appointment.time).slice(0, 8);
+
+    const appointmentDateTime = new Date(
+      `${appointmentDate}T${appointmentTime}`,
+    );
+
+    if (Number.isNaN(appointmentDateTime.getTime())) {
+      return false;
+    }
+
+    return appointmentDateTime <= new Date();
+  };
   const renderAppointmentActions = (appointment) => {
     const requestState = statusRequests[appointment.id] || {};
     const statusErrorId = `appointment-status-error-${appointment.id}`;
@@ -299,17 +314,18 @@ function DoctorSchedule() {
           <select
             className={`${styles.status} ${styles[appointment.status] || ""}`}
             value={appointment.status}
-            onChange={(e) =>
-              handleStatusChange(appointment.id, e.target.value)
-            }
+            onChange={(e) => handleStatusChange(appointment.id, e.target.value)}
             disabled={requestState.saving || isCompleted}
-            aria-describedby={
-              requestState.error ? statusErrorId : undefined
-            }
+            aria-describedby={requestState.error ? statusErrorId : undefined}
           >
             <option value="scheduled">scheduled</option>
             <option value="confirmed">confirmed</option>
-            <option value="completed">completed</option>
+            <option
+              value="completed"
+              disabled={!isCompleted && !canCompleteAppointment(appointment)}
+            >
+              completed
+            </option>
             <option value="cancelled">cancelled</option>
           </select>
 
@@ -411,29 +427,60 @@ function DoctorSchedule() {
             </div>
           )}
 
-          {!scheduleError && (viewMode === "calendar" ? (
-            <div className={styles.scheduleList}>
-              {sortedDates.map((date) => (
-                <section className={styles.dateCard} key={date}>
-                  <div className={styles.dateHeader}>
-                    <div className={styles.dateTitle}>
-                      <CalendarDays size={21} />
-                      <h2>{formatFullDate(date)}</h2>
+          {!scheduleError &&
+            (viewMode === "calendar" ? (
+              <div className={styles.scheduleList}>
+                {sortedDates.map((date) => (
+                  <section className={styles.dateCard} key={date}>
+                    <div className={styles.dateHeader}>
+                      <div className={styles.dateTitle}>
+                        <CalendarDays size={21} />
+                        <h2>{formatFullDate(date)}</h2>
+                      </div>
+
+                      <p>
+                        {groupedAppointments[date].length} appointment
+                        {groupedAppointments[date].length > 1 ? "s" : ""}(s)
+                      </p>
                     </div>
 
-                    <p>
-                      {groupedAppointments[date].length} appointment
-                      {groupedAppointments[date].length > 1 ? "s" : ""}(s)
-                    </p>
-                  </div>
+                    <div className={styles.appointmentList}>
+                      {groupedAppointments[date].map((appointment) => (
+                        <div
+                          className={styles.appointmentItem}
+                          key={appointment.id}
+                        >
+                          <div className={styles.timeBox}>
+                            {appointment.time}
+                          </div>
 
+                          <div className={styles.appointmentInfo}>
+                            <div className={styles.nameRow}>
+                              <h3>{appointment.patient_name}</h3>
+                              {renderAppointmentActions(appointment)}
+                            </div>
+
+                            <p>{appointment.treatment_type}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.scheduleList}>
+                <section className={styles.dateCard}>
                   <div className={styles.appointmentList}>
-                    {groupedAppointments[date].map((appointment) => (
+                    {sortedAppointments.map((appointment) => (
                       <div
                         className={styles.appointmentItem}
                         key={appointment.id}
                       >
-                        <div className={styles.timeBox}>{appointment.time}</div>
+                        <div className={styles.listDateTimeBox}>
+                          <strong>{formatListDate(appointment.date)}</strong>
+                          <span>{appointment.time}</span>
+                        </div>
 
                         <div className={styles.appointmentInfo}>
                           <div className={styles.nameRow}>
@@ -447,36 +494,8 @@ function DoctorSchedule() {
                     ))}
                   </div>
                 </section>
-              ))}
-            </div>
-          ) : (
-            <div className={styles.scheduleList}>
-              <section className={styles.dateCard}>
-                <div className={styles.appointmentList}>
-                  {sortedAppointments.map((appointment) => (
-                    <div
-                      className={styles.appointmentItem}
-                      key={appointment.id}
-                    >
-                      <div className={styles.listDateTimeBox}>
-                        <strong>{formatListDate(appointment.date)}</strong>
-                        <span>{appointment.time}</span>
-                      </div>
-
-                      <div className={styles.appointmentInfo}>
-                        <div className={styles.nameRow}>
-                          <h3>{appointment.patient_name}</h3>
-                          {renderAppointmentActions(appointment)}
-                        </div>
-
-                        <p>{appointment.treatment_type}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </div>
-          ))}
+              </div>
+            ))}
 
           {selectedInvoice && (
             <div className={styles.modalOverlay} onClick={closePaymentModal}>

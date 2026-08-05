@@ -158,6 +158,20 @@ function ManagerAppointments() {
     }));
   };
 
+  const canCompleteEditedAppointment = () => {
+    if (!editForm.date || !editForm.time) {
+      return false;
+    }
+
+    const appointmentDateTime = new Date(`${editForm.date}T${editForm.time}`);
+
+    if (Number.isNaN(appointmentDateTime.getTime())) {
+      return false;
+    }
+
+    return appointmentDateTime <= new Date();
+  };
+
   const handleUpdateAppointment = async (e) => {
     e.preventDefault();
 
@@ -457,7 +471,17 @@ function ManagerAppointments() {
                   >
                     <option value="scheduled">Scheduled</option>
                     <option value="confirmed">Confirmed</option>
-                    <option value="completed">Completed</option>
+
+                    <option
+                      value="completed"
+                      disabled={
+                        editForm.status !== "completed" &&
+                        !canCompleteEditedAppointment()
+                      }
+                    >
+                      Completed
+                    </option>
+
                     <option value="cancelled">Cancelled</option>
                   </select>
                 </label>
