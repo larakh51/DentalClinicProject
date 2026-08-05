@@ -397,59 +397,146 @@
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.14);
 }
 
+.customRange {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 22px;
+  padding: 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.customRange label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.customRange input {
+  height: 37px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  padding: 0 10px;
+  outline: none;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+}
+
+.customRange input:focus {
+  border-color: #2563eb;
+}
+
+.chartMessage,
+.chartError {
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 14px;
+}
+
+.chartMessage {
+  color: #64748b;
+}
+
+.chartError {
+  color: #dc2626;
+}
+
 .barChart {
-  height: 220px;
+  min-height: 220px;
   display: grid;
-  grid-template-columns: 42px 1fr;
+  grid-template-columns: 42px minmax(0, 1fr);
   gap: 10px;
 }
 
 .yAxis {
-  height: 180px;
+  height: 190px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   color: #64748b;
   font-size: 14px;
-  padding-top: 6px;
+  padding-top: 2px;
+}
+
+.barsScroll {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-top: 22px;
+  padding-bottom: 45px;
 }
 
 .bars {
   height: 190px;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
   align-items: end;
-  gap: 28px;
+  gap: 18px;
   border-left: 2px solid #94a3b8;
   border-bottom: 2px solid #94a3b8;
   background-image:
     linear-gradient(#e5e7eb 1px, transparent 1px),
     linear-gradient(90deg, #e5e7eb 1px, transparent 1px);
   background-size:
-    100% 45px,
+    100% 25%,
     25% 100%;
-  padding: 0 22px;
+  padding: 0 18px;
 }
 
-.bars div {
+.barItem {
+  position: relative;
   height: 100%;
+  min-width: 48px;
   display: flex;
   flex-direction: column;
-  justify-content: end;
+  justify-content: flex-end;
   align-items: center;
 }
 
-.bars span {
+.barColumn {
   width: 100%;
   max-width: 90px;
+  min-height: 0;
+  position: relative;
+}
+
+.barColumn small {
+  position: absolute;
+  left: 50%;
+  top: -20px;
+  transform: translateX(-50%);
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.barColumn span {
+  width: 100%;
+  height: 100%;
   border-radius: 8px 8px 0 0;
   display: block;
   background: linear-gradient(180deg, #4f8df7, #20c7b3);
+  transition: height 0.25s ease;
 }
 
-.bars p {
-  margin: 8px 0 -28px;
+.barItem p {
+  position: absolute;
+  top: calc(100% + 9px);
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
   color: #64748b;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .donutWrap {
@@ -464,13 +551,9 @@
   width: 150px;
   height: 150px;
   border-radius: 50%;
-  background: conic-gradient(
-    #3b82f6 0 36%,
-    #8b5cf6 36% 62%,
-    #f59e0b 62% 76%,
-    #10b981 76% 100%
-  );
+  background: #e5e7eb;
   position: relative;
+  flex-shrink: 0;
 }
 
 .donut::after {
@@ -508,29 +591,20 @@
   font-size: 14px;
 }
 
-.dotBlue,
-.dotGreen,
-.dotOrange,
-.dotPurple {
+.dynamicLegendDot {
   width: 12px;
   height: 12px;
   border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
 }
 
-.dotBlue {
-  background: #3b82f6;
-}
-
-.dotGreen {
-  background: #10b981;
-}
-
-.dotOrange {
-  background: #f59e0b;
-}
-
-.dotPurple {
-  background: #8b5cf6;
+.noChartData {
+  display: flex !important;
+  justify-content: center;
+  min-width: 260px;
+  color: #64748b;
+  font-size: 14px;
 }
 
 .quickActions {
@@ -701,9 +775,29 @@
     width: 100%;
   }
 
+  .customRange {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .customRange input {
+    width: 100%;
+  }
+
+  .barChart {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 6px;
+  }
+
   .donutWrap {
     flex-direction: column;
     gap: 24px;
+  }
+
+  .legend,
+  .noChartData {
+    min-width: 0;
+    width: 100%;
   }
 
   .modalCard {

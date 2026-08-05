@@ -787,6 +787,91 @@
   color: #52617a;
   font-size: 14px;
 }
+.revenueChartLayout {
+  min-height: 255px;
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.revenueYAxis {
+  height: 250px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 25px 0 48px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.revenueChartScroll {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.revenueChart {
+  display: block;
+  min-width: 560px;
+  height: 250px;
+  overflow: visible;
+}
+
+.revenueGridLine {
+  stroke: #e5e7eb;
+  stroke-width: 1;
+}
+
+.revenueLine {
+  fill: none;
+  stroke: #10b981;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.revenuePoint {
+  fill: #10b981;
+  stroke: #ffffff;
+  stroke-width: 3;
+}
+
+.revenueValue {
+  fill: #334155;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.revenueLabel {
+  fill: #64748b;
+  font-size: 12px;
+}
+
+.dynamicLegendDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.noChartData {
+  grid-column: 1 / -1;
+  justify-content: center;
+  color: #64748b;
+  font-size: 14px;
+}
+
+@media (max-width: 650px) {
+  .revenueChartLayout {
+    grid-template-columns: 68px minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .revenueYAxis {
+    font-size: 11px;
+  }
+}
 
 @media (max-width: 1150px) {
   .statsGrid {
