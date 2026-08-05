@@ -130,6 +130,13 @@ function DoctorSchedule() {
   };
 
   const handleStatusChange = async (appointmentId, newStatus) => {
+    if (newStatus === "cancelled") {
+      const confirmed = window.confirm(
+        "Are you sure you want to cancel this appointment?",
+      );
+
+      if (!confirmed) return;
+    }
     updateStatusRequest(appointmentId, {
       saving: true,
       error: "",

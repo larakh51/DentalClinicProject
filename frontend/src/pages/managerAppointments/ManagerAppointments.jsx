@@ -176,6 +176,16 @@ function ManagerAppointments() {
     e.preventDefault();
 
     if (!editingAppointment?.id) return;
+    if (
+      editForm.status === "cancelled" &&
+      editingAppointment.status !== "cancelled"
+    ) {
+      const confirmed = window.confirm(
+        "Are you sure you want to cancel this appointment?",
+      );
+
+      if (!confirmed) return;
+    }
 
     try {
       await api.put(`/appointments/${editingAppointment.id}`, {
