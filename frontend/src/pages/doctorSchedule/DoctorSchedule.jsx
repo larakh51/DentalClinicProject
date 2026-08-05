@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Filter, Search } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import Sidebar from "../../components/sidebar/Sidebar";
 import styles from "./doctorSchedule.module.css";
+
+const APPOINTMENTS_PER_PAGE = 7;
 
 const getTodayDate = () => {
   const today = new Date();
@@ -25,6 +27,12 @@ function DoctorSchedule() {
   const [statusRequests, setStatusRequests] = useState({});
   const [scheduleError, setScheduleError] = useState("");
   const [loadingSchedule, setLoadingSchedule] = useState(false);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [loadingPaymentId, setLoadingPaymentId] = useState(null);
@@ -81,30 +89,105 @@ function DoctorSchedule() {
     };
   }, [user?.id]);
 
-  const groupedAppointments = appointments.reduce((groups, appointment) => {
-    const date = appointment.date;
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, dateFilter]);
 
-    if (!groups[date]) {
-      groups[date] = [];
+  const formatInputDate = (date) => {
+    if (!date) return "";
+
+    const dateValue = String(date);
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+      return dateValue;
     }
 
-    groups[date].push(appointment);
-    return groups;
-  }, {});
+    const parsedDate = new Date(date);
 
-  const sortedDates = Object.keys(groupedAppointments).sort(
-    (a, b) => new Date(a) - new Date(b),
-  );
+    if (Number.isNaN(parsedDate.getTime())) {
+      return "";
+    }
 
-  const sortedAppointments = [...appointments].sort((a, b) => {
-    const dateDifference = new Date(a.date) - new Date(b.date);
+    const year = parsedDate.getFullYear();
+    const month = String(parsedDate.getMonth() + 1).padStart(2, "0");
+    const day = String(parsedDate.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
+
+  const filteredAppointments = appointments.filter((appointment) => {
+    const search = searchTerm.toLowerCase();
+
+    const patientName = String(appointment.patient_name || "").toLowerCase();
+
+    const doctorName = String(appointment.doctor_name || "").toLowerCase();
+
+    const treatment = String(appointment.treatment_type || "").toLowerCase();
+
+    const status = String(appointment.status || "").toLowerCase();
+    const appointmentDate = formatInputDate(appointment.date);
+
+    const matchesSearch =
+      patientName.includes(search) ||
+      doctorName.includes(search) ||
+      treatment.includes(search) ||
+      status.includes(search);
+
+    const matchesStatus =
+      statusFilter === "all" || status === statusFilter.toLowerCase();
+
+    const matchesDate = !dateFilter || appointmentDate === dateFilter;
+
+    return matchesSearch && matchesStatus && matchesDate;
+  });
+
+  const sortedFilteredAppointments = [...filteredAppointments].sort((a, b) => {
+    const dateDifference = new Date(b.date) - new Date(a.date);
 
     if (dateDifference !== 0) {
       return dateDifference;
     }
 
-    return String(a.time || "").localeCompare(String(b.time || ""));
+    return String(b.time || "").localeCompare(String(a.time || ""));
   });
+
+  const totalPages = Math.ceil(
+    sortedFilteredAppointments.length / APPOINTMENTS_PER_PAGE,
+  );
+
+  const firstAppointmentIndex = (currentPage - 1) * APPOINTMENTS_PER_PAGE;
+
+  const lastAppointmentIndex = firstAppointmentIndex + APPOINTMENTS_PER_PAGE;
+
+  const paginatedAppointments = sortedFilteredAppointments.slice(
+    firstAppointmentIndex,
+    lastAppointmentIndex,
+  );
+
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
+
+  const groupedAppointments = paginatedAppointments.reduce(
+    (groups, appointment) => {
+      const date = appointment.date;
+
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+
+      groups[date].push(appointment);
+
+      return groups;
+    },
+    {},
+  );
+
+  const sortedDates = Object.keys(groupedAppointments).sort(
+    (a, b) => new Date(b) - new Date(a),
+  );
 
   const formatFullDate = (date) => {
     return new Date(date).toLocaleDateString("en-US", {
@@ -119,6 +202,11 @@ function DoctorSchedule() {
     return new Date(date).toLocaleDateString("en-GB");
   };
 
+  const clearFilters = () => {
+    setStatusFilter("all");
+    setDateFilter("");
+  };
+
   const updateStatusRequest = (appointmentId, values) => {
     setStatusRequests((prev) => ({
       ...prev,
@@ -130,18 +218,23 @@ function DoctorSchedule() {
   };
 
   const handleStatusChange = async (appointmentId, newStatus) => {
+    if (newStatus === "cancelled") {
+      const confirmed = window.confirm(
+        "Are you sure you want to cancel this appointment?",
+      );
+
+      if (!confirmed) return;
+    }
+
     updateStatusRequest(appointmentId, {
       saving: true,
       error: "",
     });
 
     try {
-      const res = await api.patch(
-        `/appointments/${appointmentId}/status`,
-        {
-          status: newStatus,
-        },
-      );
+      const res = await api.patch(`/appointments/${appointmentId}/status`, {
+        status: newStatus,
+      });
 
       const confirmedStatus = res.data?.appointment?.status;
 
@@ -259,6 +352,7 @@ function DoctorSchedule() {
       setPaymentError(
         `Payment amount cannot exceed ₪${remainingAmount.toFixed(2)}`,
       );
+
       return;
     }
 
@@ -287,9 +381,30 @@ function DoctorSchedule() {
     }
   };
 
+  const canCompleteAppointment = (appointment) => {
+    if (!appointment?.date || !appointment?.time) {
+      return false;
+    }
+
+    const appointmentDate = String(appointment.date).split("T")[0];
+    const appointmentTime = String(appointment.time).slice(0, 8);
+
+    const appointmentDateTime = new Date(
+      `${appointmentDate}T${appointmentTime}`,
+    );
+
+    if (Number.isNaN(appointmentDateTime.getTime())) {
+      return false;
+    }
+
+    return appointmentDateTime <= new Date();
+  };
+
   const renderAppointmentActions = (appointment) => {
     const requestState = statusRequests[appointment.id] || {};
+
     const statusErrorId = `appointment-status-error-${appointment.id}`;
+
     const isCompleted =
       String(appointment.status || "").toLowerCase() === "completed";
 
@@ -299,17 +414,20 @@ function DoctorSchedule() {
           <select
             className={`${styles.status} ${styles[appointment.status] || ""}`}
             value={appointment.status}
-            onChange={(e) =>
-              handleStatusChange(appointment.id, e.target.value)
-            }
+            onChange={(e) => handleStatusChange(appointment.id, e.target.value)}
             disabled={requestState.saving || isCompleted}
-            aria-describedby={
-              requestState.error ? statusErrorId : undefined
-            }
+            aria-describedby={requestState.error ? statusErrorId : undefined}
           >
             <option value="scheduled">scheduled</option>
             <option value="confirmed">confirmed</option>
-            <option value="completed">completed</option>
+
+            <option
+              value="completed"
+              disabled={!isCompleted && !canCompleteAppointment(appointment)}
+            >
+              completed
+            </option>
+
             <option value="cancelled">cancelled</option>
           </select>
 
@@ -397,9 +515,69 @@ function DoctorSchedule() {
             </button>
           </div>
 
+          <div className={styles.scheduleToolbar}>
+            <div className={styles.searchBox}>
+              <Search size={19} />
+
+              <input
+                type="text"
+                placeholder="Search appointments..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+
+            <button
+              type="button"
+              className={styles.filterBtn}
+              onClick={() => setShowFilters((prev) => !prev)}
+            >
+              <Filter size={17} />
+              Filter
+            </button>
+          </div>
+
+          {showFilters && (
+            <div className={styles.filterPanel}>
+              <div className={styles.filterField}>
+                <label>Status</label>
+
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="all">All</option>
+                  <option value="scheduled">Scheduled</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              <div className={styles.filterField}>
+                <label>Date</label>
+
+                <input
+                  type="date"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                />
+              </div>
+
+              <button
+                type="button"
+                className={styles.clearFilterBtn}
+                onClick={clearFilters}
+              >
+                Clear
+              </button>
+            </div>
+          )}
+
           {scheduleError && (
             <div className={styles.scheduleError} role="alert">
               <p>{scheduleError}</p>
+
               <button
                 type="button"
                 className={styles.retryButton}
@@ -411,33 +589,70 @@ function DoctorSchedule() {
             </div>
           )}
 
-          {!scheduleError && (viewMode === "calendar" ? (
-            <div className={styles.scheduleList}>
-              {sortedDates.map((date) => (
-                <section className={styles.dateCard} key={date}>
-                  <div className={styles.dateHeader}>
-                    <div className={styles.dateTitle}>
-                      <CalendarDays size={21} />
-                      <h2>{formatFullDate(date)}</h2>
+          {!scheduleError &&
+            (filteredAppointments.length === 0 ? (
+              <div className={styles.emptyBox}>No appointments found</div>
+            ) : viewMode === "calendar" ? (
+              <div className={styles.scheduleList}>
+                {sortedDates.map((date) => (
+                  <section className={styles.dateCard} key={date}>
+                    <div className={styles.dateHeader}>
+                      <div className={styles.dateTitle}>
+                        <CalendarDays size={21} />
+                        <h2>{formatFullDate(date)}</h2>
+                      </div>
+
+                      <p>
+                        {groupedAppointments[date].length} appointment
+                        {groupedAppointments[date].length > 1 ? "s" : ""}
+                        (s)
+                      </p>
                     </div>
 
-                    <p>
-                      {groupedAppointments[date].length} appointment
-                      {groupedAppointments[date].length > 1 ? "s" : ""}(s)
-                    </p>
-                  </div>
+                    <div className={styles.appointmentList}>
+                      {groupedAppointments[date].map((appointment) => (
+                        <div
+                          className={styles.appointmentItem}
+                          key={appointment.id}
+                        >
+                          <div className={styles.timeBox}>
+                            {appointment.time}
+                          </div>
 
+                          <div className={styles.appointmentInfo}>
+                            <div className={styles.nameRow}>
+                              <h3>{appointment.patient_name}</h3>
+
+                              {renderAppointmentActions(appointment)}
+                            </div>
+
+                            <p>{appointment.treatment_type}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.scheduleList}>
+                <section className={styles.dateCard}>
                   <div className={styles.appointmentList}>
-                    {groupedAppointments[date].map((appointment) => (
+                    {paginatedAppointments.map((appointment) => (
                       <div
                         className={styles.appointmentItem}
                         key={appointment.id}
                       >
-                        <div className={styles.timeBox}>{appointment.time}</div>
+                        <div className={styles.listDateTimeBox}>
+                          <strong>{formatListDate(appointment.date)}</strong>
+
+                          <span>{appointment.time}</span>
+                        </div>
 
                         <div className={styles.appointmentInfo}>
                           <div className={styles.nameRow}>
                             <h3>{appointment.patient_name}</h3>
+
                             {renderAppointmentActions(appointment)}
                           </div>
 
@@ -447,36 +662,51 @@ function DoctorSchedule() {
                     ))}
                   </div>
                 </section>
-              ))}
-            </div>
-          ) : (
-            <div className={styles.scheduleList}>
-              <section className={styles.dateCard}>
-                <div className={styles.appointmentList}>
-                  {sortedAppointments.map((appointment) => (
-                    <div
-                      className={styles.appointmentItem}
-                      key={appointment.id}
-                    >
-                      <div className={styles.listDateTimeBox}>
-                        <strong>{formatListDate(appointment.date)}</strong>
-                        <span>{appointment.time}</span>
-                      </div>
+              </div>
+            ))}
 
-                      <div className={styles.appointmentInfo}>
-                        <div className={styles.nameRow}>
-                          <h3>{appointment.patient_name}</h3>
-                          {renderAppointmentActions(appointment)}
-                        </div>
+          {totalPages > 1 && !scheduleError && (
+            <div className={styles.pagination}>
+              <button
+                type="button"
+                className={styles.paginationArrow}
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              >
+                ‹
+              </button>
 
-                        <p>{appointment.treatment_type}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
+              {Array.from({ length: totalPages }, (_, index) => {
+                const pageNumber = index + 1;
+
+                return (
+                  <button
+                    type="button"
+                    key={pageNumber}
+                    className={
+                      currentPage === pageNumber
+                        ? `${styles.pageButton} ${styles.activePage}`
+                        : styles.pageButton
+                    }
+                    onClick={() => setCurrentPage(pageNumber)}
+                  >
+                    {pageNumber}
+                  </button>
+                );
+              })}
+
+              <button
+                type="button"
+                className={styles.paginationArrow}
+                disabled={currentPage === totalPages}
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
+              >
+                ›
+              </button>
             </div>
-          ))}
+          )}
 
           {selectedInvoice && (
             <div className={styles.modalOverlay} onClick={closePaymentModal}>

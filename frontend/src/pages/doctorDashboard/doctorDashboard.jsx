@@ -77,6 +77,56 @@ const getDaysBetween = (startDate, endDate) => {
   );
 };
 
+const getPeriodRange = (period, customStartDate, customEndDate) => {
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+
+  if (period === "week") {
+    const currentDay = todayDate.getDay();
+    const distanceFromMonday = currentDay === 0 ? -6 : 1 - currentDay;
+
+    const start = addDays(todayDate, distanceFromMonday);
+    const end = addDays(start, 4);
+
+    return {
+      start,
+      end,
+    };
+  }
+
+  if (period === "month") {
+    return {
+      start: new Date(todayDate.getFullYear(), todayDate.getMonth(), 1),
+
+      end: new Date(todayDate.getFullYear(), todayDate.getMonth() + 1, 0),
+    };
+  }
+
+  if (period === "threeMonths") {
+    return {
+      start: new Date(todayDate.getFullYear(), todayDate.getMonth() - 2, 1),
+
+      end: new Date(todayDate.getFullYear(), todayDate.getMonth() + 1, 0),
+    };
+  }
+
+  if (period === "custom") {
+    const start = parseSqlDate(customStartDate);
+    const end = parseSqlDate(customEndDate);
+
+    if (!start || !end || start > end) {
+      return null;
+    }
+
+    return {
+      start,
+      end,
+    };
+  }
+
+  return null;
+};
+
 function DoctorDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -95,6 +145,16 @@ function DoctorDashboard() {
   );
 
   const [customEndDate, setCustomEndDate] = useState(toSqlDate(currentDate));
+
+  const [treatmentPeriod, setTreatmentPeriod] = useState("threeMonths");
+
+  const [treatmentCustomStartDate, setTreatmentCustomStartDate] = useState(
+    toSqlDate(defaultCustomStartDate),
+  );
+
+  const [treatmentCustomEndDate, setTreatmentCustomEndDate] = useState(
+    toSqlDate(currentDate),
+  );
 
   const [chartAppointments, setChartAppointments] = useState([]);
   const [chartLoading, setChartLoading] = useState(false);
@@ -170,61 +230,16 @@ function DoctorDashboard() {
   }, [user]);
 
   const chartRange = useMemo(() => {
-    const todayDate = new Date();
-    todayDate.setHours(0, 0, 0, 0);
-
-    if (appointmentPeriod === "week") {
-      const currentDay = todayDate.getDay();
-
-      const distanceFromMonday = currentDay === 0 ? -6 : 1 - currentDay;
-
-      const start = addDays(todayDate, distanceFromMonday);
-      const end = addDays(start, 4);
-
-      return { start, end };
-    }
-
-    if (appointmentPeriod === "month") {
-      const start = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1);
-
-      const end = new Date(
-        todayDate.getFullYear(),
-        todayDate.getMonth() + 1,
-        0,
-      );
-
-      return { start, end };
-    }
-
-    if (appointmentPeriod === "threeMonths") {
-      const start = new Date(
-        todayDate.getFullYear(),
-        todayDate.getMonth() - 2,
-        1,
-      );
-
-      const end = new Date(
-        todayDate.getFullYear(),
-        todayDate.getMonth() + 1,
-        0,
-      );
-
-      return { start, end };
-    }
-
-    if (appointmentPeriod === "custom") {
-      const start = parseSqlDate(customStartDate);
-      const end = parseSqlDate(customEndDate);
-
-      if (!start || !end || start > end) {
-        return null;
-      }
-
-      return { start, end };
-    }
-
-    return null;
+    return getPeriodRange(appointmentPeriod, customStartDate, customEndDate);
   }, [appointmentPeriod, customStartDate, customEndDate]);
+
+  const treatmentRange = useMemo(() => {
+    return getPeriodRange(
+      treatmentPeriod,
+      treatmentCustomStartDate,
+      treatmentCustomEndDate,
+    );
+  }, [treatmentPeriod, treatmentCustomStartDate, treatmentCustomEndDate]);
 
   useEffect(() => {
     let ignoreResult = false;
@@ -414,6 +429,84 @@ function DoctorDashboard() {
     return buildMonthlyData(chartRange.start, chartRange.end);
   }, [chartAppointments, chartRange, appointmentPeriod]);
 
+  const treatmentChartData = useMemo(() => {
+    const colors = ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6"];
+
+    if (!treatmentRange) {
+      return {
+        segments: [],
+        gradient: "#e5e7eb",
+      };
+    }
+
+    const counts = {};
+    const startDateKey = toSqlDate(treatmentRange.start);
+    const endDateKey = toSqlDate(treatmentRange.end);
+
+    appointments.forEach((appointment) => {
+      const appointmentDate = getDateKey(appointment.date);
+
+      const status = String(appointment.status || "").toLowerCase();
+
+      if (
+        !appointmentDate ||
+        appointmentDate < startDateKey ||
+        appointmentDate > endDateKey ||
+        status === "cancelled"
+      ) {
+        return;
+      }
+
+      const treatmentName = appointment.treatment_type || "Other";
+
+      counts[treatmentName] = (counts[treatmentName] || 0) + 1;
+    });
+
+    const sortedTreatments = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+    const mainTreatments = sortedTreatments.slice(0, 3);
+
+    const otherCount = sortedTreatments
+      .slice(3)
+      .reduce((sum, treatment) => sum + treatment[1], 0);
+
+    const treatmentSegments = [...mainTreatments];
+
+    if (otherCount > 0) {
+      treatmentSegments.push(["Other", otherCount]);
+    }
+
+    const segments = treatmentSegments.map(([name, count], index) => ({
+      name,
+      count,
+      color: colors[index],
+    }));
+
+    const total = segments.reduce((sum, segment) => sum + segment.count, 0);
+
+    if (total === 0) {
+      return {
+        segments: [],
+        gradient: "#e5e7eb",
+      };
+    }
+
+    let currentPercentage = 0;
+
+    const gradientParts = segments.map((segment) => {
+      const startPercentage = currentPercentage;
+
+      currentPercentage += (segment.count / total) * 100;
+
+      return `${segment.color} ${startPercentage}% ${currentPercentage}%`;
+    });
+
+    return {
+      segments,
+      gradient: `conic-gradient(${gradientParts.join(", ")})`,
+    };
+  }, [appointments, treatmentRange]);
+
   const maximumAppointmentCount = Math.max(
     ...appointmentChartData.map((item) => item.count),
     0,
@@ -437,17 +530,28 @@ function DoctorDashboard() {
   };
 
   const chartDescription = chartRange
-    ? `${chartPeriodNames[appointmentPeriod]}: ${chartRange.start.toLocaleDateString(
+    ? `${
+        chartPeriodNames[appointmentPeriod]
+      }: ${chartRange.start.toLocaleDateString(
         "en-GB",
       )} - ${chartRange.end.toLocaleDateString("en-GB")}`
+    : "Select a valid date range";
+
+  const treatmentDescription = treatmentRange
+    ? `${
+        chartPeriodNames[treatmentPeriod]
+      }: ${treatmentRange.start.toLocaleDateString(
+        "en-GB",
+      )} - ${treatmentRange.end.toLocaleDateString("en-GB")}`
     : "Select a valid date range";
 
   const now = new Date();
   const today = toSqlDate(now);
 
-  const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(
-    now.getMinutes(),
-  ).padStart(2, "0")}`;
+  const currentTime = `${String(now.getHours()).padStart(
+    2,
+    "0",
+  )}:${String(now.getMinutes()).padStart(2, "0")}`;
 
   const todayAppointments = appointments.filter(
     (appointment) => getDateKey(appointment.date) === today,
@@ -459,7 +563,9 @@ function DoctorDashboard() {
 
   const upcomingAppointments = appointments.filter((appointment) => {
     const status = String(appointment.status || "").toLowerCase();
+
     const appointmentDate = getDateKey(appointment.date);
+
     const appointmentTime = String(appointment.time || "").slice(0, 5);
 
     if (status === "completed" || status === "cancelled") {
@@ -792,7 +898,9 @@ function DoctorDashboard() {
                           >
                             <div
                               className={styles.barColumn}
-                              style={{ height: barHeight }}
+                              style={{
+                                height: barHeight,
+                              }}
                             >
                               <small>{item.count}</small>
                               <span></span>
@@ -809,40 +917,88 @@ function DoctorDashboard() {
             </div>
 
             <div className={styles.chartCard}>
-              <div className={styles.sectionHeader}>
-                <h2>Treatment Types</h2>
-                <p>Your cases by category</p>
+              <div className={styles.chartHeaderRow}>
+                <div className={styles.sectionHeader}>
+                  <h2>Treatment Types</h2>
+                  <p>{treatmentDescription}</p>
+                </div>
+
+                <select
+                  className={styles.periodSelect}
+                  value={treatmentPeriod}
+                  onChange={(event) => setTreatmentPeriod(event.target.value)}
+                >
+                  <option value="week">This Week</option>
+                  <option value="month">This Month</option>
+                  <option value="threeMonths">Last 3 Months</option>
+                  <option value="custom">Custom Range</option>
+                </select>
               </div>
 
-              <div className={styles.donutWrap}>
-                <div className={styles.donut}></div>
+              {treatmentPeriod === "custom" && (
+                <div className={styles.customRange}>
+                  <label>
+                    From
+                    <input
+                      type="date"
+                      value={treatmentCustomStartDate}
+                      max={treatmentCustomEndDate || undefined}
+                      onChange={(event) =>
+                        setTreatmentCustomStartDate(event.target.value)
+                      }
+                    />
+                  </label>
 
-                <div className={styles.legend}>
-                  <div>
-                    <span className={styles.dotBlue}></span>
-                    <p>Check-ups</p>
-                    <strong>5</strong>
-                  </div>
+                  <label>
+                    To
+                    <input
+                      type="date"
+                      value={treatmentCustomEndDate}
+                      min={treatmentCustomStartDate || undefined}
+                      onChange={(event) =>
+                        setTreatmentCustomEndDate(event.target.value)
+                      }
+                    />
+                  </label>
+                </div>
+              )}
 
-                  <div>
-                    <span className={styles.dotGreen}></span>
-                    <p>Fillings</p>
-                    <strong>3</strong>
-                  </div>
+              {!treatmentRange ? (
+                <div className={styles.chartError}>
+                  Start date must be before end date
+                </div>
+              ) : (
+                <div className={styles.donutWrap}>
+                  <div
+                    className={styles.donut}
+                    style={{
+                      background: treatmentChartData.gradient,
+                    }}
+                  ></div>
 
-                  <div>
-                    <span className={styles.dotOrange}></span>
-                    <p>Root Canals</p>
-                    <strong>2</strong>
-                  </div>
+                  <div className={styles.legend}>
+                    {treatmentChartData.segments.length === 0 ? (
+                      <div className={styles.noChartData}>
+                        No treatment data found
+                      </div>
+                    ) : (
+                      treatmentChartData.segments.map((segment) => (
+                        <div key={segment.name}>
+                          <span
+                            className={styles.dynamicLegendDot}
+                            style={{
+                              backgroundColor: segment.color,
+                            }}
+                          ></span>
 
-                  <div>
-                    <span className={styles.dotPurple}></span>
-                    <p>Other</p>
-                    <strong>4</strong>
+                          <p>{segment.name}</p>
+                          <strong>{segment.count}</strong>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </section>
 
@@ -889,7 +1045,7 @@ function DoctorDashboard() {
           >
             <div
               className={styles.modalCard}
-              onClick={(e) => e.stopPropagation()}
+              onClick={(event) => event.stopPropagation()}
             >
               <div className={styles.modalHeader}>
                 <div>
@@ -909,6 +1065,7 @@ function DoctorDashboard() {
               <div className={styles.detailsGrid}>
                 <div className={styles.detailItem}>
                   <span className={styles.detailLabel}>Patient</span>
+
                   <p>{viewingAppointment.patient_name || "Not available"}</p>
                 </div>
 

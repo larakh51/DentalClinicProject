@@ -78,12 +78,84 @@ const getDaysBetween = (startDate, endDate) => {
   );
 };
 
+const getPeriodRange = (period, customStartDate, customEndDate) => {
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+
+  if (period === "week") {
+    const currentDay = todayDate.getDay();
+    const distanceFromMonday = currentDay === 0 ? -6 : 1 - currentDay;
+
+    const start = addDays(todayDate, distanceFromMonday);
+    const end = addDays(start, 4);
+
+    return {
+      start,
+      end,
+    };
+  }
+
+  if (period === "month") {
+    return {
+      start: new Date(todayDate.getFullYear(), todayDate.getMonth(), 1),
+
+      end: new Date(todayDate.getFullYear(), todayDate.getMonth() + 1, 0),
+    };
+  }
+
+  if (period === "threeMonths") {
+    return {
+      start: new Date(todayDate.getFullYear(), todayDate.getMonth() - 2, 1),
+
+      end: new Date(todayDate.getFullYear(), todayDate.getMonth() + 1, 0),
+    };
+  }
+
+  if (period === "custom") {
+    const start = parseSqlDate(customStartDate);
+    const end = parseSqlDate(customEndDate);
+
+    if (!start || !end || start > end) {
+      return null;
+    }
+
+    return {
+      start,
+      end,
+    };
+  }
+
+  return null;
+};
+
+const getNiceMaximum = (value, fallback = 1000) => {
+  const number = Number(value || 0);
+
+  if (number <= 0) {
+    return fallback;
+  }
+
+  const magnitude = 10 ** Math.floor(Math.log10(number));
+  const normalizedValue = number / magnitude;
+
+  let roundedValue = 10;
+
+  if (normalizedValue <= 1) {
+    roundedValue = 1;
+  } else if (normalizedValue <= 2) {
+    roundedValue = 2;
+  } else if (normalizedValue <= 5) {
+    roundedValue = 5;
+  }
+
+  return roundedValue * magnitude;
+};
+
 function ManagerDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
   const currentDate = new Date();
-
   const defaultCustomStartDate = addDays(currentDate, -6);
 
   const [appointments, setAppointments] = useState([]);
@@ -98,6 +170,26 @@ function ManagerDashboard() {
   );
 
   const [customEndDate, setCustomEndDate] = useState(toSqlDate(currentDate));
+
+  const [revenuePeriod, setRevenuePeriod] = useState("threeMonths");
+
+  const [revenueCustomStartDate, setRevenueCustomStartDate] = useState(
+    toSqlDate(defaultCustomStartDate),
+  );
+
+  const [revenueCustomEndDate, setRevenueCustomEndDate] = useState(
+    toSqlDate(currentDate),
+  );
+
+  const [treatmentPeriod, setTreatmentPeriod] = useState("threeMonths");
+
+  const [treatmentCustomStartDate, setTreatmentCustomStartDate] = useState(
+    toSqlDate(defaultCustomStartDate),
+  );
+
+  const [treatmentCustomEndDate, setTreatmentCustomEndDate] = useState(
+    toSqlDate(currentDate),
+  );
 
   const [chartAppointments, setChartAppointments] = useState([]);
   const [chartLoading, setChartLoading] = useState(false);
@@ -214,73 +306,24 @@ function ManagerDashboard() {
   }, []);
 
   const chartRange = useMemo(() => {
-    const todayDate = new Date();
-    todayDate.setHours(0, 0, 0, 0);
-
-    if (appointmentPeriod === "week") {
-      const currentDay = todayDate.getDay();
-
-      const distanceFromMonday = currentDay === 0 ? -6 : 1 - currentDay;
-
-      const start = addDays(todayDate, distanceFromMonday);
-      const end = addDays(start, 4);
-
-      return {
-        start,
-        end,
-      };
-    }
-
-    if (appointmentPeriod === "month") {
-      const start = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1);
-
-      const end = new Date(
-        todayDate.getFullYear(),
-        todayDate.getMonth() + 1,
-        0,
-      );
-
-      return {
-        start,
-        end,
-      };
-    }
-
-    if (appointmentPeriod === "threeMonths") {
-      const start = new Date(
-        todayDate.getFullYear(),
-        todayDate.getMonth() - 2,
-        1,
-      );
-
-      const end = new Date(
-        todayDate.getFullYear(),
-        todayDate.getMonth() + 1,
-        0,
-      );
-
-      return {
-        start,
-        end,
-      };
-    }
-
-    if (appointmentPeriod === "custom") {
-      const start = parseSqlDate(customStartDate);
-      const end = parseSqlDate(customEndDate);
-
-      if (!start || !end || start > end) {
-        return null;
-      }
-
-      return {
-        start,
-        end,
-      };
-    }
-
-    return null;
+    return getPeriodRange(appointmentPeriod, customStartDate, customEndDate);
   }, [appointmentPeriod, customStartDate, customEndDate]);
+
+  const revenueRange = useMemo(() => {
+    return getPeriodRange(
+      revenuePeriod,
+      revenueCustomStartDate,
+      revenueCustomEndDate,
+    );
+  }, [revenuePeriod, revenueCustomStartDate, revenueCustomEndDate]);
+
+  const treatmentRange = useMemo(() => {
+    return getPeriodRange(
+      treatmentPeriod,
+      treatmentCustomStartDate,
+      treatmentCustomEndDate,
+    );
+  }, [treatmentPeriod, treatmentCustomStartDate, treatmentCustomEndDate]);
 
   useEffect(() => {
     let ignoreResult = false;
@@ -468,6 +511,234 @@ function ManagerDashboard() {
     return buildMonthlyData(chartRange.start, chartRange.end);
   }, [chartAppointments, chartRange, appointmentPeriod]);
 
+  const revenueChartData = useMemo(() => {
+    if (!revenueRange) return [];
+
+    const totalsByDate = {};
+    const startDateKey = toSqlDate(revenueRange.start);
+    const endDateKey = toSqlDate(revenueRange.end);
+
+    invoices.forEach((invoice) => {
+      if (String(invoice.status || "").toLowerCase() !== "paid") {
+        return;
+      }
+
+      const invoiceDate = getDateKey(invoice.date);
+
+      if (
+        !invoiceDate ||
+        invoiceDate < startDateKey ||
+        invoiceDate > endDateKey
+      ) {
+        return;
+      }
+
+      totalsByDate[invoiceDate] =
+        (totalsByDate[invoiceDate] || 0) + Number(invoice.amount || 0);
+    });
+
+    const getTotalBetweenDates = (startDate, endDate) => {
+      let total = 0;
+      let cursor = new Date(startDate);
+
+      while (cursor <= endDate) {
+        total += totalsByDate[toSqlDate(cursor)] || 0;
+        cursor = addDays(cursor, 1);
+      }
+
+      return total;
+    };
+
+    const buildDailyData = (startDate, endDate, useWeekdayLabel) => {
+      const data = [];
+      let cursor = new Date(startDate);
+
+      while (cursor <= endDate) {
+        const dateKey = toSqlDate(cursor);
+
+        data.push({
+          label: useWeekdayLabel
+            ? cursor.toLocaleDateString("en-GB", {
+                weekday: "short",
+              })
+            : getShortDate(cursor),
+
+          amount: totalsByDate[dateKey] || 0,
+        });
+
+        cursor = addDays(cursor, 1);
+      }
+
+      return data;
+    };
+
+    const buildWeeklyData = (startDate, endDate) => {
+      const data = [];
+      let cursor = new Date(startDate);
+
+      while (cursor <= endDate) {
+        const bucketStart = new Date(cursor);
+        const possibleEnd = addDays(bucketStart, 6);
+
+        const bucketEnd =
+          possibleEnd > endDate ? new Date(endDate) : possibleEnd;
+
+        data.push({
+          label: `${getShortDate(bucketStart)}-${getShortDate(bucketEnd)}`,
+
+          amount: getTotalBetweenDates(bucketStart, bucketEnd),
+        });
+
+        cursor = addDays(bucketEnd, 1);
+      }
+
+      return data;
+    };
+
+    const buildMonthlyData = (startDate, endDate) => {
+      const data = [];
+
+      let monthCursor = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        1,
+      );
+
+      while (monthCursor <= endDate) {
+        const monthStart =
+          monthCursor < startDate ? new Date(startDate) : new Date(monthCursor);
+
+        const lastDayOfMonth = new Date(
+          monthCursor.getFullYear(),
+          monthCursor.getMonth() + 1,
+          0,
+        );
+
+        const monthEnd =
+          lastDayOfMonth > endDate ? new Date(endDate) : lastDayOfMonth;
+
+        data.push({
+          label: monthCursor.toLocaleDateString("en-GB", {
+            month: "short",
+            year: "2-digit",
+          }),
+
+          amount: getTotalBetweenDates(monthStart, monthEnd),
+        });
+
+        monthCursor = new Date(
+          monthCursor.getFullYear(),
+          monthCursor.getMonth() + 1,
+          1,
+        );
+      }
+
+      return data;
+    };
+
+    if (revenuePeriod === "week") {
+      return buildDailyData(revenueRange.start, revenueRange.end, true);
+    }
+
+    if (revenuePeriod === "month") {
+      return buildWeeklyData(revenueRange.start, revenueRange.end);
+    }
+
+    if (revenuePeriod === "threeMonths") {
+      return buildMonthlyData(revenueRange.start, revenueRange.end);
+    }
+
+    const totalDays = getDaysBetween(revenueRange.start, revenueRange.end);
+
+    if (totalDays <= 14) {
+      return buildDailyData(revenueRange.start, revenueRange.end, false);
+    }
+
+    if (totalDays <= 90) {
+      return buildWeeklyData(revenueRange.start, revenueRange.end);
+    }
+
+    return buildMonthlyData(revenueRange.start, revenueRange.end);
+  }, [invoices, revenueRange, revenuePeriod]);
+
+  const treatmentChartData = useMemo(() => {
+    const colors = ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6"];
+
+    if (!treatmentRange) {
+      return {
+        segments: [],
+        gradient: "#e5e7eb",
+      };
+    }
+
+    const counts = {};
+    const startDateKey = toSqlDate(treatmentRange.start);
+    const endDateKey = toSqlDate(treatmentRange.end);
+
+    appointments.forEach((appointment) => {
+      const appointmentDate = getDateKey(appointment.date);
+
+      const appointmentStatus = String(appointment.status || "").toLowerCase();
+
+      if (
+        !appointmentDate ||
+        appointmentDate < startDateKey ||
+        appointmentDate > endDateKey ||
+        appointmentStatus === "cancelled"
+      ) {
+        return;
+      }
+
+      const treatmentName = appointment.treatment_type || "Other";
+
+      counts[treatmentName] = (counts[treatmentName] || 0) + 1;
+    });
+
+    const sortedTreatments = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+    const mainTreatments = sortedTreatments.slice(0, 3);
+
+    const otherCount = sortedTreatments
+      .slice(3)
+      .reduce((sum, item) => sum + item[1], 0);
+
+    const treatmentSegments = [...mainTreatments];
+
+    if (otherCount > 0) {
+      treatmentSegments.push(["Other", otherCount]);
+    }
+
+    const segments = treatmentSegments.map(([name, count], index) => ({
+      name,
+      count,
+      color: colors[index],
+    }));
+
+    const total = segments.reduce((sum, segment) => sum + segment.count, 0);
+
+    if (total === 0) {
+      return {
+        segments: [],
+        gradient: "#e5e7eb",
+      };
+    }
+
+    let currentPercentage = 0;
+
+    const gradientParts = segments.map((segment) => {
+      const startPercentage = currentPercentage;
+
+      currentPercentage += (segment.count / total) * 100;
+
+      return `${segment.color} ${startPercentage}% ${currentPercentage}%`;
+    });
+
+    return {
+      segments,
+      gradient: `conic-gradient(${gradientParts.join(", ")})`,
+    };
+  }, [appointments, treatmentRange]);
+
   const maximumAppointmentCount = Math.max(
     ...appointmentChartData.map((item) => item.count),
     0,
@@ -483,6 +754,57 @@ function ManagerDashboard() {
     0,
   ];
 
+  const maximumRevenue = Math.max(
+    ...revenueChartData.map((item) => item.amount),
+    0,
+  );
+
+  const revenueYAxisMaximum = getNiceMaximum(maximumRevenue, 1000);
+
+  const revenueYAxisLabels = [
+    revenueYAxisMaximum,
+    Math.round(revenueYAxisMaximum * 0.75),
+    Math.round(revenueYAxisMaximum * 0.5),
+    Math.round(revenueYAxisMaximum * 0.25),
+    0,
+  ];
+
+  const revenueChartWidth = Math.max(560, revenueChartData.length * 90);
+
+  const revenueChartHeight = 250;
+  const revenueChartTop = 25;
+  const revenueChartBottom = 48;
+
+  const revenueChartPoints = revenueChartData.map((item, index) => {
+    const availableWidth = revenueChartWidth - 50;
+
+    const x =
+      revenueChartData.length === 1
+        ? revenueChartWidth / 2
+        : 25 +
+          (index * availableWidth) / Math.max(revenueChartData.length - 1, 1);
+
+    const availableHeight =
+      revenueChartHeight - revenueChartTop - revenueChartBottom;
+
+    const y =
+      revenueChartTop +
+      availableHeight -
+      (item.amount / revenueYAxisMaximum) * availableHeight;
+
+    return {
+      ...item,
+      x,
+      y,
+    };
+  });
+
+  const revenueLinePath = revenueChartPoints
+    .map((point, index) => {
+      return `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`;
+    })
+    .join(" ");
+
   const chartPeriodName = {
     week: "This Week",
     month: "This Month",
@@ -491,9 +813,27 @@ function ManagerDashboard() {
   };
 
   const chartDescription = chartRange
-    ? `${chartPeriodName[appointmentPeriod]}: ${chartRange.start.toLocaleDateString(
+    ? `${
+        chartPeriodName[appointmentPeriod]
+      }: ${chartRange.start.toLocaleDateString(
         "en-GB",
       )} - ${chartRange.end.toLocaleDateString("en-GB")}`
+    : "Select a valid date range";
+
+  const revenueDescription = revenueRange
+    ? `${
+        chartPeriodName[revenuePeriod]
+      }: ${revenueRange.start.toLocaleDateString(
+        "en-GB",
+      )} - ${revenueRange.end.toLocaleDateString("en-GB")}`
+    : "Select a valid date range";
+
+  const treatmentDescription = treatmentRange
+    ? `${
+        chartPeriodName[treatmentPeriod]
+      }: ${treatmentRange.start.toLocaleDateString(
+        "en-GB",
+      )} - ${treatmentRange.end.toLocaleDateString("en-GB")}`
     : "Select a valid date range";
 
   const today = toSqlDate(new Date());
@@ -735,9 +1075,7 @@ function ManagerDashboard() {
                 >
                   <option value="week">This Week</option>
                   <option value="month">This Month</option>
-
                   <option value="threeMonths">Last 3 Months</option>
-
                   <option value="custom">Custom Range</option>
                 </select>
               </div>
@@ -836,62 +1174,223 @@ function ManagerDashboard() {
             </div>
 
             <div className={styles.chartCard}>
-              <div className={styles.sectionHeader}>
-                <h2>Revenue Trend</h2>
-                <p>Monthly revenue growth</p>
+              <div className={styles.chartHeaderRow}>
+                <div className={styles.sectionHeader}>
+                  <h2>Revenue Trend</h2>
+                  <p>{revenueDescription}</p>
+                </div>
+
+                <select
+                  className={styles.periodSelect}
+                  value={revenuePeriod}
+                  onChange={(event) => setRevenuePeriod(event.target.value)}
+                  aria-label="Select revenue period"
+                >
+                  <option value="week">This Week</option>
+                  <option value="month">This Month</option>
+                  <option value="threeMonths">Last 3 Months</option>
+                  <option value="custom">Custom Range</option>
+                </select>
               </div>
 
-              <div className={styles.lineChart}>
-                <div className={styles.linePointOne}></div>
-                <div className={styles.linePointTwo}></div>
-                <div className={styles.linePointThree}></div>
-                <div className={styles.line}></div>
+              {revenuePeriod === "custom" && (
+                <div className={styles.customRange}>
+                  <label>
+                    From
+                    <input
+                      type="date"
+                      value={revenueCustomStartDate}
+                      max={revenueCustomEndDate || undefined}
+                      onChange={(event) =>
+                        setRevenueCustomStartDate(event.target.value)
+                      }
+                    />
+                  </label>
 
-                <span className={styles.y8000}>8000</span>
-                <span className={styles.y6000}>6000</span>
-                <span className={styles.y4000}>4000</span>
-                <span className={styles.y2000}>2000</span>
-                <span className={styles.y0}>0</span>
+                  <label>
+                    To
+                    <input
+                      type="date"
+                      value={revenueCustomEndDate}
+                      min={revenueCustomStartDate || undefined}
+                      onChange={(event) =>
+                        setRevenueCustomEndDate(event.target.value)
+                      }
+                    />
+                  </label>
+                </div>
+              )}
 
-                <span className={styles.xJan}>Jan</span>
-                <span className={styles.xFeb}>Feb</span>
-                <span className={styles.xMar}>Mar</span>
-              </div>
+              {!revenueRange ? (
+                <div className={styles.chartError}>
+                  Start date must be before end date
+                </div>
+              ) : (
+                <div className={styles.revenueChartLayout}>
+                  <div className={styles.revenueYAxis}>
+                    {revenueYAxisLabels.map((label, index) => (
+                      <span key={`${label}-${index}`}>
+                        ₪{label.toLocaleString()}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className={styles.revenueChartScroll}>
+                    <svg
+                      className={styles.revenueChart}
+                      viewBox={`0 0 ${revenueChartWidth} ${revenueChartHeight}`}
+                      style={{
+                        width: `${revenueChartWidth}px`,
+                      }}
+                    >
+                      {revenueYAxisLabels.map((label, index) => {
+                        const availableHeight =
+                          revenueChartHeight -
+                          revenueChartTop -
+                          revenueChartBottom;
+
+                        const y =
+                          revenueChartTop +
+                          (index * availableHeight) /
+                            Math.max(revenueYAxisLabels.length - 1, 1);
+
+                        return (
+                          <line
+                            key={`${label}-${index}`}
+                            className={styles.revenueGridLine}
+                            x1="0"
+                            x2={revenueChartWidth}
+                            y1={y}
+                            y2={y}
+                          />
+                        );
+                      })}
+
+                      {revenueChartPoints.length > 0 && (
+                        <path
+                          className={styles.revenueLine}
+                          d={revenueLinePath}
+                        />
+                      )}
+
+                      {revenueChartPoints.map((point, index) => (
+                        <g key={`${point.label}-${index}`}>
+                          <circle
+                            className={styles.revenuePoint}
+                            cx={point.x}
+                            cy={point.y}
+                            r="5"
+                          />
+
+                          <text
+                            className={styles.revenueValue}
+                            x={point.x}
+                            y={Math.max(point.y - 11, 14)}
+                            textAnchor="middle"
+                          >
+                            ₪{point.amount.toLocaleString()}
+                          </text>
+
+                          <text
+                            className={styles.revenueLabel}
+                            x={point.x}
+                            y={revenueChartHeight - 15}
+                            textAnchor="middle"
+                          >
+                            {point.label}
+                          </text>
+                        </g>
+                      ))}
+                    </svg>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 
           <section className={styles.bottomGrid}>
             <div className={styles.chartCard}>
-              <div className={styles.sectionHeader}>
-                <h2>Treatment Types</h2>
-                <p>Distribution by category</p>
+              <div className={styles.chartHeaderRow}>
+                <div className={styles.sectionHeader}>
+                  <h2>Treatment Types</h2>
+                  <p>{treatmentDescription}</p>
+                </div>
+
+                <select
+                  className={styles.periodSelect}
+                  value={treatmentPeriod}
+                  onChange={(event) => setTreatmentPeriod(event.target.value)}
+                  aria-label="Select treatment period"
+                >
+                  <option value="week">This Week</option>
+                  <option value="month">This Month</option>
+                  <option value="threeMonths">Last 3 Months</option>
+                  <option value="custom">Custom Range</option>
+                </select>
               </div>
 
-              <div className={styles.donutWrap}>
-                <div className={styles.donut}></div>
+              {treatmentPeriod === "custom" && (
+                <div className={styles.customRange}>
+                  <label>
+                    From
+                    <input
+                      type="date"
+                      value={treatmentCustomStartDate}
+                      max={treatmentCustomEndDate || undefined}
+                      onChange={(event) =>
+                        setTreatmentCustomStartDate(event.target.value)
+                      }
+                    />
+                  </label>
 
-                <div className={styles.legendGrid}>
-                  <div>
-                    <span className={styles.dotBlue}></span>
-                    Cleaning: 7
-                  </div>
+                  <label>
+                    To
+                    <input
+                      type="date"
+                      value={treatmentCustomEndDate}
+                      min={treatmentCustomStartDate || undefined}
+                      onChange={(event) =>
+                        setTreatmentCustomEndDate(event.target.value)
+                      }
+                    />
+                  </label>
+                </div>
+              )}
 
-                  <div>
-                    <span className={styles.dotGreen}></span>
-                    Filling: 4
-                  </div>
+              {!treatmentRange ? (
+                <div className={styles.chartError}>
+                  Start date must be before end date
+                </div>
+              ) : (
+                <div className={styles.donutWrap}>
+                  <div
+                    className={styles.donut}
+                    style={{
+                      background: treatmentChartData.gradient,
+                    }}
+                  ></div>
 
-                  <div>
-                    <span className={styles.dotOrange}></span>
-                    Root Canal: 2
-                  </div>
-
-                  <div>
-                    <span className={styles.dotPurple}></span>
-                    Other: 8
+                  <div className={styles.legendGrid}>
+                    {treatmentChartData.segments.length === 0 ? (
+                      <div className={styles.noChartData}>
+                        No treatment data found
+                      </div>
+                    ) : (
+                      treatmentChartData.segments.map((segment) => (
+                        <div key={segment.name}>
+                          <span
+                            className={styles.dynamicLegendDot}
+                            style={{
+                              backgroundColor: segment.color,
+                            }}
+                          ></span>
+                          {segment.name}: {segment.count}
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <div className={styles.chartCard}>

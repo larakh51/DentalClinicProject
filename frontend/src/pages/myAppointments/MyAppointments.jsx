@@ -39,6 +39,12 @@ function MyAppointments() {
   }, [activeTab]);
 
   const cancelAppointment = async (id) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to cancel this appointment?",
+    );
+
+    if (!confirmed) return;
+
     try {
       await api.patch(`/appointments/${id}/status`, {
         status: "cancelled",
@@ -47,7 +53,8 @@ function MyAppointments() {
       loadAppointments();
     } catch (err) {
       console.log("Failed to cancel appointment", err);
-      setError("Failed to cancel appointment");
+
+      setError(err.response?.data?.message || "Failed to cancel appointment");
     }
   };
 

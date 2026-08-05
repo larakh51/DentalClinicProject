@@ -158,10 +158,34 @@ function ManagerAppointments() {
     }));
   };
 
+  const canCompleteEditedAppointment = () => {
+    if (!editForm.date || !editForm.time) {
+      return false;
+    }
+
+    const appointmentDateTime = new Date(`${editForm.date}T${editForm.time}`);
+
+    if (Number.isNaN(appointmentDateTime.getTime())) {
+      return false;
+    }
+
+    return appointmentDateTime <= new Date();
+  };
+
   const handleUpdateAppointment = async (e) => {
     e.preventDefault();
 
     if (!editingAppointment?.id) return;
+    if (
+      editForm.status === "cancelled" &&
+      editingAppointment.status !== "cancelled"
+    ) {
+      const confirmed = window.confirm(
+        "Are you sure you want to cancel this appointment?",
+      );
+
+      if (!confirmed) return;
+    }
 
     try {
       await api.put(`/appointments/${editingAppointment.id}`, {
@@ -457,7 +481,17 @@ function ManagerAppointments() {
                   >
                     <option value="scheduled">Scheduled</option>
                     <option value="confirmed">Confirmed</option>
-                    <option value="completed">Completed</option>
+
+                    <option
+                      value="completed"
+                      disabled={
+                        editForm.status !== "completed" &&
+                        !canCompleteEditedAppointment()
+                      }
+                    >
+                      Completed
+                    </option>
+
                     <option value="cancelled">Cancelled</option>
                   </select>
                 </label>

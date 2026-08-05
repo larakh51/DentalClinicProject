@@ -415,6 +415,20 @@ const updateAppointment = async (req, res) => {
       });
     }
 
+    if (finalStatus === "completed") {
+      const [[completionCheck]] = await pool.query(
+        `SELECT TIMESTAMP(?, ?) <= NOW() AS can_complete`,
+        [finalDate, finalTime],
+      );
+
+      if (!Number(completionCheck.can_complete)) {
+        return res.status(400).json({
+          message:
+            "The appointment cannot be completed before its scheduled date and time",
+        });
+      }
+    }
+
     if (finalStatus !== "cancelled") {
       const [conflicts] = await pool.query(
         `SELECT id, time, end_time
@@ -482,10 +496,37 @@ const updateAppointment = async (req, res) => {
 
 const updateAppointmentStatus = async (req, res) => {
   try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (status === "completed") {
+      const [appointments] = await pool.query(
+        `SELECT
+           id,
+           TIMESTAMP(date, time) <= NOW() AS can_complete
+         FROM appointments
+         WHERE id = ?`,
+        [id],
+      );
+
+      if (appointments.length === 0) {
+        return res.status(404).json({
+          message: "Appointment not found",
+        });
+      }
+
+      if (!Number(appointments[0].can_complete)) {
+        return res.status(400).json({
+          message:
+            "The appointment cannot be completed before its scheduled date and time",
+        });
+      }
+    }
+
     const appointment = await changeAppointmentStatus({
       database: pool,
-      appointmentId: req.params.id,
-      nextStatus: req.body.status,
+      appointmentId: id,
+      nextStatus: status,
       actor: req.user,
     });
 
