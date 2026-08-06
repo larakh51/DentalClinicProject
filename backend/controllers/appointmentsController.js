@@ -199,10 +199,11 @@ const createAppointment = async (req, res) => {
     let finalTreatmentType = treatmentType || null;
     let durationMinutes = 30;
     let finalTreatmentTypeId = treatmentTypeId || null;
+    let bookedPrice = null;
 
     if (treatmentTypeId) {
       const [types] = await pool.query(
-        `SELECT id, name, duration_minutes
+        `SELECT id, name, duration_minutes, price
          FROM treatment_types
          WHERE id = ?
            AND status = 'active'`,
@@ -216,10 +217,9 @@ const createAppointment = async (req, res) => {
       }
 
       finalTreatmentType = types[0].name;
-
       durationMinutes = Number(types[0].duration_minutes || 30);
-
       finalTreatmentTypeId = types[0].id;
+      bookedPrice = Number(types[0].price || 0);
     }
 
     if (!finalTreatmentType) {
@@ -227,6 +227,19 @@ const createAppointment = async (req, res) => {
         message: "Treatment type is required",
       });
     }
+
+    const [vatSettings] = await pool.query(
+      `SELECT setting_value
+       FROM clinic_settings
+       WHERE setting_key = 'vat_percentage'
+       LIMIT 1`,
+    );
+
+    const currentVatPercentage = Number(vatSettings[0]?.setting_value ?? 18);
+
+    const bookedVatPercentage = Number.isFinite(currentVatPercentage)
+      ? currentVatPercentage
+      : 18;
 
     const [[endResult]] = await pool.query(
       `SELECT ADDTIME(
@@ -286,11 +299,13 @@ const createAppointment = async (req, res) => {
          duration_minutes,
          treatment_type_id,
          treatment_type,
+         booked_price,
+         booked_vat_percentage,
          status,
          notes
        )
        VALUES (
-         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
          'scheduled',
          ?
        )`,
@@ -306,6 +321,8 @@ const createAppointment = async (req, res) => {
         durationMinutes,
         finalTreatmentTypeId,
         finalTreatmentType,
+        bookedPrice,
+        bookedVatPercentage,
         notes || null,
       ],
     );

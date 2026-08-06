@@ -170,6 +170,7 @@ const createInvoice = async (req, res) => {
     });
   }
 };
+
 const getOrCreateAppointmentInvoice = async (req, res) => {
   try {
     const { appointmentId } = req.params;
@@ -188,7 +189,11 @@ const getOrCreateAppointmentInvoice = async (req, res) => {
           CONCAT(patient.first_name, ' ', patient.last_name)
         ) AS patient_name,
 
-        COALESCE(treatment.price, 0) AS treatment_price
+        COALESCE(
+          a.booked_price,
+          treatment.price,
+          0
+        ) AS treatment_price
 
       FROM appointments a
 
@@ -331,6 +336,7 @@ const getOrCreateAppointmentInvoice = async (req, res) => {
     });
   }
 };
+
 const updateInvoiceStatus = async (req, res) => {
   try {
     const { id } = req.params;

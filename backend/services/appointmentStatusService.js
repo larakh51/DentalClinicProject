@@ -1,11 +1,6 @@
 const { randomBytes } = require("node:crypto");
 
-const ALLOWED_STATUSES = [
-  "scheduled",
-  "confirmed",
-  "completed",
-  "cancelled",
-];
+const ALLOWED_STATUSES = ["scheduled", "confirmed", "completed", "cancelled"];
 
 class AppointmentStatusError extends Error {
   constructor(statusCode, message) {
@@ -29,6 +24,7 @@ const authorizeStatusChange = (actor, appointment, nextStatus) => {
   const isManager = actor.role === "manager";
   const isAssignedDoctor =
     actor.role === "doctor" && actor.id === appointment.doctor_id;
+
   const isAllowedPatientCancellation =
     actor.role === "patient" &&
     actor.id === appointment.patient_id &&
@@ -36,10 +32,7 @@ const authorizeStatusChange = (actor, appointment, nextStatus) => {
     ["scheduled", "confirmed"].includes(appointment.status);
 
   if (!isManager && !isAssignedDoctor && !isAllowedPatientCancellation) {
-    throw new AppointmentStatusError(
-      403,
-      "You cannot update this appointment",
-    );
+    throw new AppointmentStatusError(403, "You cannot update this appointment");
   }
 
   if (appointment.status === "completed" && nextStatus !== "completed") {
@@ -50,8 +43,7 @@ const authorizeStatusChange = (actor, appointment, nextStatus) => {
   }
 };
 
-const createEntityId = (prefix) =>
-  `${prefix}${randomBytes(8).toString("hex")}`;
+const createEntityId = (prefix) => `${prefix}${randomBytes(8).toString("hex")}`;
 
 const loadAppointment = async (database, appointmentId, lock = false) => {
   const [appointments] = await database.query(
@@ -63,7 +55,9 @@ const loadAppointment = async (database, appointmentId, lock = false) => {
        treatment_type_id,
        treatment_type,
        patient_name,
-       date
+       date,
+       booked_price,
+       booked_vat_percentage
      FROM appointments
      WHERE id = ?
      LIMIT 1${lock ? " FOR UPDATE" : ""}`,
@@ -84,6 +78,7 @@ const updateSimpleStatus = async ({
   actor,
 }) => {
   const appointment = await loadAppointment(database, appointmentId);
+
   authorizeStatusChange(actor, appointment, nextStatus);
 
   await database.query(
@@ -100,6 +95,12 @@ const updateSimpleStatus = async ({
 };
 
 const resolveTreatmentCost = async (connection, appointment) => {
+  const bookedPrice = Number(appointment.booked_price);
+
+  if (Number.isFinite(bookedPrice) && bookedPrice > 0) {
+    return bookedPrice;
+  }
+
   let treatmentTypes = [];
 
   if (appointment.treatment_type_id) {
@@ -134,30 +135,21 @@ const resolveTreatmentCost = async (connection, appointment) => {
   return treatmentCost;
 };
 
-const completeAppointment = async ({
-  database,
-  appointmentId,
-  actor,
-}) => {
+const completeAppointment = async ({ database, appointmentId, actor }) => {
   let connection;
   let transactionStarted = false;
 
   try {
     connection = await database.getConnection();
+
     await connection.beginTransaction();
     transactionStarted = true;
 
-    const appointment = await loadAppointment(
-      connection,
-      appointmentId,
-      true,
-    );
+    const appointment = await loadAppointment(connection, appointmentId, true);
+
     authorizeStatusChange(actor, appointment, "completed");
 
-    const treatmentCost = await resolveTreatmentCost(
-      connection,
-      appointment,
-    );
+    const treatmentCost = await resolveTreatmentCost(connection, appointment);
 
     await connection.query(
       `UPDATE appointments
