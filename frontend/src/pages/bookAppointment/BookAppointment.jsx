@@ -156,16 +156,6 @@ function BookAppointment() {
     return hours * 60 + minutes;
   };
 
-  const minutesToTime = (totalMinutes) => {
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-
-    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
-      2,
-      "0",
-    )}`;
-  };
-
   const getSelectedDay = () => {
     if (!form.date) return null;
 
@@ -188,6 +178,7 @@ function BookAppointment() {
     if (!selectedTreatment || !form.date) return false;
 
     const startMinutes = timeToMinutes(slot);
+
     const durationMinutes = Number(selectedTreatment.duration_minutes || 30);
 
     const endMinutes = startMinutes + durationMinutes;
@@ -251,42 +242,7 @@ function BookAppointment() {
     );
   };
 
-  const getSlotLabel = (slot) => {
-    if (isClinicClosedOnSelectedDate()) {
-      return `${slot} - Clinic closed on Saturday`;
-    }
-
-    if (isPastSlot(slot)) {
-      return `${slot} - Past`;
-    }
-
-    if (doesSlotEndAfterClosing(slot)) {
-      return `${slot} - Exceeds clinic closing time`;
-    }
-
-    const conflict = getSlotConflict(slot);
-
-    if (conflict) {
-      const start = String(conflict.time).slice(0, 5);
-
-      const end = conflict.end_time
-        ? String(conflict.end_time).slice(0, 5)
-        : minutesToTime(
-            timeToMinutes(conflict.time) +
-              Number(conflict.duration_minutes || 30),
-          );
-
-      return `${slot} - Booked (${start}-${end})`;
-    }
-
-    return slot;
-  };
-
-  const availableTimeSlots = TIME_SLOTS.map((slot) => ({
-    time: slot,
-    disabled: isSlotDisabled(slot),
-    label: getSlotLabel(slot),
-  }));
+  const availableTimeSlots = TIME_SLOTS.filter((slot) => !isSlotDisabled(slot));
 
   useEffect(() => {
     const loadData = async () => {
@@ -500,6 +456,7 @@ function BookAppointment() {
       setError(
         `The appointment must end before the clinic closes at ${getClinicClosingTime()}`,
       );
+
       return;
     }
 
@@ -527,9 +484,13 @@ function BookAppointment() {
 
       await api.post("/appointments", {
         patientId: appointmentPatient.id,
+
         patientName: `${appointmentPatient.first_name} ${appointmentPatient.last_name}`,
+
         doctorId: form.doctorId,
+
         doctorName: `Dr. ${selectedDoctor.first_name} ${selectedDoctor.last_name}`,
+
         date: form.date,
         time: form.time,
         treatmentTypeId: form.treatmentTypeId,
@@ -584,10 +545,12 @@ function BookAppointment() {
           <section className={styles.formCard}>
             <div className={styles.cardHeader}>
               <h2>Appointment Details</h2>
+
               <p>Fill in the information below to book your appointment</p>
             </div>
 
             {error && <div className={styles.errorBox}>{error}</div>}
+
             {success && <div className={styles.successBox}>{success}</div>}
 
             {loadingData && (
@@ -704,12 +667,8 @@ function BookAppointment() {
                   </option>
 
                   {availableTimeSlots.map((slot) => (
-                    <option
-                      key={slot.time}
-                      value={slot.time}
-                      disabled={slot.disabled}
-                    >
-                      {slot.label}
+                    <option key={slot} value={slot}>
+                      {slot}
                     </option>
                   ))}
                 </select>
@@ -800,8 +759,11 @@ function BookAppointment() {
 
               <ul>
                 <li>Please arrive 10 minutes before your appointment</li>
+
                 <li>Bring your insurance card and ID</li>
+
                 <li>Cancel at least 24 hours in advance to avoid fees</li>
+
                 <li>You will receive a confirmation SMS and email</li>
               </ul>
             </section>
