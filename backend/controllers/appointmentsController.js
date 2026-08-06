@@ -4,6 +4,16 @@ const {
   changeAppointmentStatus,
 } = require("../services/appointmentStatusService");
 
+let hebcalModulePromise;
+
+const getHebcalModule = () => {
+  if (!hebcalModulePromise) {
+    hebcalModulePromise = import("@hebcal/core");
+  }
+
+  return hebcalModulePromise;
+};
+
 const formatSqlDate = (date) => {
   if (!date) return "";
 
@@ -32,6 +42,77 @@ const normalizeTime = (time) => {
 
 const isValidSqlDate = (date) => {
   return /^\d{4}-\d{2}-\d{2}$/.test(String(date || ""));
+};
+
+const normalizeCalendarDate = (date) => {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    12,
+    0,
+    0,
+    0,
+  );
+};
+
+const isClosedIsraeliHolidayEvent = (event, flags) => {
+  const description = String(event.getDesc() || "").replaceAll("’", "'");
+
+  return (
+    Boolean(event.getFlags() & flags.CHAG) ||
+    description === "Yom Kippur" ||
+    description === "Yom HaAtzma'ut" ||
+    description === "Yom HaAtzmaut"
+  );
+};
+
+const isIsraeliHoliday = async (date) => {
+  const normalizedDate = normalizeCalendarDate(date);
+
+  if (!normalizedDate) {
+    return false;
+  }
+
+  const { HebrewCalendar, flags } = await getHebcalModule();
+
+  const events = HebrewCalendar.getHolidaysOnDate(normalizedDate, true) || [];
+
+  return events.some((event) => isClosedIsraeliHolidayEvent(event, flags));
+};
+
+const isIsraeliHolidayEve = async (date) => {
+  const normalizedDate = normalizeCalendarDate(date);
+
+  if (!normalizedDate) {
+    return false;
+  }
+
+  const nextDate = new Date(normalizedDate);
+  nextDate.setDate(nextDate.getDate() + 1);
+
+  return isIsraeliHoliday(nextDate);
+};
+
+const getClinicClosingTimeForDate = async (date) => {
+  const normalizedDate = normalizeCalendarDate(date);
+
+  if (!normalizedDate) {
+    return "19:00:00";
+  }
+
+  const isFriday = normalizedDate.getDay() === 5;
+  const isHolidayEve = await isIsraeliHolidayEve(normalizedDate);
+
+  if (isFriday || isHolidayEve) {
+    return "14:00:00";
+  }
+
+  return "19:00:00";
 };
 
 const getDoctorAppointmentCounts = async (req, res) => {
@@ -196,6 +277,18 @@ const createAppointment = async (req, res) => {
       });
     }
 
+    if (appointmentDate.getDay() === 6) {
+      return res.status(400).json({
+        message: "The clinic is closed on Saturday",
+      });
+    }
+
+    if (await isIsraeliHoliday(appointmentDate)) {
+      return res.status(400).json({
+        message: "The clinic is closed on this holiday",
+      });
+    }
+
     let finalTreatmentType = treatmentType || null;
     let durationMinutes = 30;
     let finalTreatmentTypeId = treatmentTypeId || null;
@@ -250,11 +343,16 @@ const createAppointment = async (req, res) => {
     );
 
     const endTime = endResult.endTime;
-    const clinicClosingTime = "19:00:00";
+
+    const clinicClosingTime =
+      await getClinicClosingTimeForDate(appointmentDate);
 
     if (String(endTime).slice(0, 8) > clinicClosingTime) {
       return res.status(400).json({
-        message: "The appointment must end before the clinic closes at 19:00",
+        message: `The appointment must end before the clinic closes at ${clinicClosingTime.slice(
+          0,
+          5,
+        )}`,
       });
     }
 
@@ -430,6 +528,37 @@ const updateAppointment = async (req, res) => {
       return res.status(400).json({
         message: "Invalid appointment status",
       });
+    }
+
+    const finalAppointmentDate = new Date(`${finalDate}T00:00:00`);
+
+    if (finalStatus !== "cancelled" && finalAppointmentDate.getDay() === 6) {
+      return res.status(400).json({
+        message: "The clinic is closed on Saturday",
+      });
+    }
+
+    if (
+      finalStatus !== "cancelled" &&
+      (await isIsraeliHoliday(finalAppointmentDate))
+    ) {
+      return res.status(400).json({
+        message: "The clinic is closed on this holiday",
+      });
+    }
+
+    if (finalStatus !== "cancelled") {
+      const clinicClosingTime =
+        await getClinicClosingTimeForDate(finalAppointmentDate);
+
+      if (String(endTime).slice(0, 8) > clinicClosingTime) {
+        return res.status(400).json({
+          message: `The appointment must end before the clinic closes at ${clinicClosingTime.slice(
+            0,
+            5,
+          )}`,
+        });
+      }
     }
 
     if (finalStatus === "completed") {
