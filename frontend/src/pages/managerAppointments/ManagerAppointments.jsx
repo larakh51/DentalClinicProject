@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarDays, Filter, Search } from "lucide-react";
+import DatePicker from "react-datepicker";
+import { HebrewCalendar, flags } from "@hebcal/core";
+import "react-datepicker/dist/react-datepicker.css";
 
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
@@ -8,6 +11,61 @@ import Sidebar from "../../components/sidebar/Sidebar";
 import styles from "./managerAppointments.module.css";
 
 const APPOINTMENTS_PER_PAGE = 7;
+
+const CLINIC_CLOSING_TIME = "19:00";
+const SHORT_DAY_CLOSING_TIME = "14:00";
+
+const normalizeCalendarDate = (date) => {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    12,
+    0,
+    0,
+    0,
+  );
+};
+
+const isClosedIsraeliHolidayEvent = (event) => {
+  const description = String(event.getDesc() || "").replaceAll("’", "'");
+
+  return (
+    Boolean(event.getFlags() & flags.CHAG) ||
+    description === "Yom Kippur" ||
+    description === "Yom HaAtzma'ut" ||
+    description === "Yom HaAtzmaut"
+  );
+};
+
+const isIsraeliHoliday = (date) => {
+  const normalizedDate = normalizeCalendarDate(date);
+
+  if (!normalizedDate) {
+    return false;
+  }
+
+  const events = HebrewCalendar.getHolidaysOnDate(normalizedDate, true) || [];
+
+  return events.some(isClosedIsraeliHolidayEvent);
+};
+
+const isIsraeliHolidayEve = (date) => {
+  const normalizedDate = normalizeCalendarDate(date);
+
+  if (!normalizedDate) {
+    return false;
+  }
+
+  const nextDate = new Date(normalizedDate);
+  nextDate.setDate(nextDate.getDate() + 1);
+
+  return isIsraeliHoliday(nextDate);
+};
 
 function ManagerAppointments() {
   const { user } = useAuth();
@@ -87,13 +145,75 @@ function ManagerAppointments() {
     return String(time).slice(0, 5);
   };
 
+  const timeToMinutes = (time) => {
+    if (!time) return 0;
+
+    const cleanTime = String(time).slice(0, 5);
+    const [hours, minutes] = cleanTime.split(":").map(Number);
+
+    return hours * 60 + minutes;
+  };
+
+  const getEditSelectedDate = () => {
+    if (!editForm.date) {
+      return null;
+    }
+
+    const [year, month, day] = editForm.date.split("-").map(Number);
+
+    if (!year || !month || !day) {
+      return null;
+    }
+
+    const selectedDate = new Date(year, month - 1, day, 12, 0, 0, 0);
+
+    if (Number.isNaN(selectedDate.getTime())) {
+      return null;
+    }
+
+    return selectedDate;
+  };
+
+  const getEditClinicClosingTime = () => {
+    const selectedDate = getEditSelectedDate();
+
+    if (
+      selectedDate &&
+      (selectedDate.getDay() === 5 || isIsraeliHolidayEve(selectedDate))
+    ) {
+      return SHORT_DAY_CLOSING_TIME;
+    }
+
+    return CLINIC_CLOSING_TIME;
+  };
+
+  const doesEditedAppointmentEndAfterClosing = () => {
+    if (!editForm.time || !editForm.date) {
+      return false;
+    }
+
+    const startMinutes = timeToMinutes(editForm.time);
+
+    const durationMinutes = Number(editingAppointment?.duration_minutes || 30);
+
+    const endMinutes = startMinutes + durationMinutes;
+
+    const closingMinutes = timeToMinutes(getEditClinicClosingTime());
+
+    return endMinutes > closingMinutes;
+  };
+
   const filteredAppointments = appointments.filter((appointment) => {
     const search = searchTerm.toLowerCase();
 
     const patientName = String(appointment.patient_name || "").toLowerCase();
+
     const doctorName = String(appointment.doctor_name || "").toLowerCase();
+
     const treatment = String(appointment.treatment_type || "").toLowerCase();
+
     const status = String(appointment.status || "").toLowerCase();
+
     const appointmentDate = formatInputDate(appointment.date);
 
     const matchesSearch =
@@ -158,6 +278,28 @@ function ManagerAppointments() {
     }));
   };
 
+  const handleEditDateChange = (date) => {
+    if (!date) {
+      setEditForm((prev) => ({
+        ...prev,
+        date: "",
+      }));
+
+      return;
+    }
+
+    if (date.getDay() === 6 || isIsraeliHoliday(date)) {
+      return;
+    }
+
+    setEditForm((prev) => ({
+      ...prev,
+      date: formatInputDate(date),
+    }));
+
+    setError("");
+  };
+
   const canCompleteEditedAppointment = () => {
     if (!editForm.date || !editForm.time) {
       return false;
@@ -176,6 +318,34 @@ function ManagerAppointments() {
     e.preventDefault();
 
     if (!editingAppointment?.id) return;
+
+    if (editForm.status !== "cancelled") {
+      const selectedDate = getEditSelectedDate();
+
+      if (!selectedDate) {
+        setError("Please select a valid appointment date");
+        return;
+      }
+
+      if (selectedDate.getDay() === 6) {
+        setError("The clinic is closed on Saturday");
+        return;
+      }
+
+      if (isIsraeliHoliday(selectedDate)) {
+        setError("The clinic is closed on this holiday");
+        return;
+      }
+
+      if (doesEditedAppointmentEndAfterClosing()) {
+        setError(
+          `The appointment must end before the clinic closes at ${getEditClinicClosingTime()}`,
+        );
+
+        return;
+      }
+    }
+
     if (
       editForm.status === "cancelled" &&
       editingAppointment.status !== "cancelled"
@@ -441,11 +611,18 @@ function ManagerAppointments() {
               <div className={styles.formGrid}>
                 <label>
                   Date
-                  <input
-                    type="date"
+                  <DatePicker
+                    selected={
+                      editForm.date
+                        ? new Date(`${editForm.date}T12:00:00`)
+                        : null
+                    }
+                    onChange={handleEditDateChange}
+                    filterDate={(date) =>
+                      date.getDay() !== 6 && !isIsraeliHoliday(date)
+                    }
+                    dateFormat="yyyy-MM-dd"
                     name="date"
-                    value={editForm.date}
-                    onChange={handleEditChange}
                     required
                   />
                 </label>
@@ -480,6 +657,7 @@ function ManagerAppointments() {
                     required
                   >
                     <option value="scheduled">Scheduled</option>
+
                     <option value="confirmed">Confirmed</option>
 
                     <option

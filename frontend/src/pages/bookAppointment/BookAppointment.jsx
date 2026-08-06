@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarDays } from "lucide-react";
 import DatePicker from "react-datepicker";
+import { HebrewCalendar, flags } from "@hebcal/core";
 import "react-datepicker/dist/react-datepicker.css";
 
 import { useAuth } from "../../context/AuthContext";
@@ -73,7 +74,59 @@ const TIME_SLOTS = [
 ];
 
 const CLINIC_CLOSING_TIME = "19:00";
-const FRIDAY_CLOSING_TIME = "14:00";
+const SHORT_DAY_CLOSING_TIME = "14:00";
+
+const normalizeCalendarDate = (date) => {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    12,
+    0,
+    0,
+    0,
+  );
+};
+
+const isClosedIsraeliHolidayEvent = (event) => {
+  const description = String(event.getDesc() || "").replaceAll("’", "'");
+
+  return (
+    Boolean(event.getFlags() & flags.CHAG) ||
+    description === "Yom Kippur" ||
+    description === "Yom HaAtzma'ut" ||
+    description === "Yom HaAtzmaut"
+  );
+};
+
+const isIsraeliHoliday = (date) => {
+  const normalizedDate = normalizeCalendarDate(date);
+
+  if (!normalizedDate) {
+    return false;
+  }
+
+  const events = HebrewCalendar.getHolidaysOnDate(normalizedDate, true) || [];
+
+  return events.some(isClosedIsraeliHolidayEvent);
+};
+
+const isIsraeliHolidayEve = (date) => {
+  const normalizedDate = normalizeCalendarDate(date);
+
+  if (!normalizedDate) {
+    return false;
+  }
+
+  const nextDate = new Date(normalizedDate);
+  nextDate.setDate(nextDate.getDate() + 1);
+
+  return isIsraeliHoliday(nextDate);
+};
 
 function BookAppointment() {
   const navigate = useNavigate();
@@ -156,19 +209,35 @@ function BookAppointment() {
     return hours * 60 + minutes;
   };
 
-  const getSelectedDay = () => {
+  const getSelectedDate = () => {
     if (!form.date) return null;
 
-    return new Date(`${form.date}T00:00:00`).getDay();
+    const [year, month, day] = form.date.split("-").map(Number);
+
+    return new Date(year, month - 1, day, 12, 0, 0, 0);
+  };
+
+  const getSelectedDay = () => {
+    return getSelectedDate()?.getDay() ?? null;
   };
 
   const isClinicClosedOnSelectedDate = () => {
-    return getSelectedDay() === 6;
+    const selectedDate = getSelectedDate();
+
+    return (
+      getSelectedDay() === 6 ||
+      Boolean(selectedDate && isIsraeliHoliday(selectedDate))
+    );
   };
 
   const getClinicClosingTime = () => {
-    if (getSelectedDay() === 5) {
-      return FRIDAY_CLOSING_TIME;
+    const selectedDate = getSelectedDate();
+
+    if (
+      getSelectedDay() === 5 ||
+      Boolean(selectedDate && isIsraeliHolidayEve(selectedDate))
+    ) {
+      return SHORT_DAY_CLOSING_TIME;
     }
 
     return CLINIC_CLOSING_TIME;
@@ -341,7 +410,14 @@ function BookAppointment() {
       return;
     }
 
-    if (error === "The clinic is closed on Saturday") {
+    if (date && isIsraeliHoliday(date)) {
+      return;
+    }
+
+    if (
+      error === "The clinic is closed on Saturday" ||
+      error === "The clinic is closed on this holiday"
+    ) {
       setError("");
     }
 
@@ -356,7 +432,8 @@ function BookAppointment() {
     const { name, value } = e.target;
 
     if (name === "date" && value) {
-      const selectedDay = new Date(`${value}T00:00:00`).getDay();
+      const selectedDate = new Date(`${value}T12:00:00`);
+      const selectedDay = selectedDate.getDay();
 
       if (selectedDay === 6) {
         setError("The clinic is closed on Saturday");
@@ -370,7 +447,22 @@ function BookAppointment() {
         return;
       }
 
-      if (error === "The clinic is closed on Saturday") {
+      if (isIsraeliHoliday(selectedDate)) {
+        setError("The clinic is closed on this holiday");
+
+        setForm((prev) => ({
+          ...prev,
+          date: "",
+          time: "",
+        }));
+
+        return;
+      }
+
+      if (
+        error === "The clinic is closed on Saturday" ||
+        error === "The clinic is closed on this holiday"
+      ) {
         setError("");
       }
     }
@@ -447,8 +539,15 @@ function BookAppointment() {
       return;
     }
 
-    if (isClinicClosedOnSelectedDate()) {
+    if (getSelectedDay() === 6) {
       setError("The clinic is closed on Saturday");
+      return;
+    }
+
+    const selectedDate = getSelectedDate();
+
+    if (selectedDate && isIsraeliHoliday(selectedDate)) {
+      setError("The clinic is closed on this holiday");
       return;
     }
 
@@ -636,7 +735,9 @@ function BookAppointment() {
                   }
                   onChange={handleDateChange}
                   minDate={new Date(`${minimumBookingDate}T00:00:00`)}
-                  filterDate={(date) => date.getDay() !== 6}
+                  filterDate={(date) =>
+                    date.getDay() !== 6 && !isIsraeliHoliday(date)
+                  }
                   dateFormat="yyyy-MM-dd"
                   name="date"
                   required
