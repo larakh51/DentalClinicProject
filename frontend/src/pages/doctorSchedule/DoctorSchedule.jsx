@@ -5,6 +5,7 @@ import { CalendarDays, Filter, Search } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import Sidebar from "../../components/sidebar/Sidebar";
+import AppModal from "../../components/appModal/AppModal";
 import styles from "./doctorSchedule.module.css";
 
 const APPOINTMENTS_PER_PAGE = 7;
@@ -39,11 +40,37 @@ function DoctorSchedule() {
   const [savingPayment, setSavingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState("");
 
+  const [cancelModal, setCancelModal] = useState({
+    appointmentId: null,
+  });
+
+  const [messageModal, setMessageModal] = useState({
+    open: false,
+    title: "",
+    message: "",
+  });
+
   const [paymentForm, setPaymentForm] = useState({
     amount: "",
     paymentMethod: "cash",
     date: "",
   });
+
+  const showMessage = (title, message) => {
+    setMessageModal({
+      open: true,
+      title,
+      message,
+    });
+  };
+
+  const closeMessageModal = () => {
+    setMessageModal({
+      open: false,
+      title: "",
+      message: "",
+    });
+  };
 
   const loadSchedule = async () => {
     if (!user?.id) return;
@@ -119,11 +146,8 @@ function DoctorSchedule() {
     const search = searchTerm.toLowerCase();
 
     const patientName = String(appointment.patient_name || "").toLowerCase();
-
     const doctorName = String(appointment.doctor_name || "").toLowerCase();
-
     const treatment = String(appointment.treatment_type || "").toLowerCase();
-
     const status = String(appointment.status || "").toLowerCase();
 
     const appointmentDate = formatInputDate(appointment.date);
@@ -227,15 +251,7 @@ function DoctorSchedule() {
     }));
   };
 
-  const handleStatusChange = async (appointmentId, newStatus) => {
-    if (newStatus === "cancelled") {
-      const confirmed = window.confirm(
-        "Are you sure you want to cancel this appointment?",
-      );
-
-      if (!confirmed) return;
-    }
-
+  const updateAppointmentStatus = async (appointmentId, newStatus) => {
     updateStatusRequest(appointmentId, {
       saving: true,
       error: "",
@@ -280,9 +296,43 @@ function DoctorSchedule() {
     }
   };
 
+  const handleStatusChange = async (appointmentId, newStatus) => {
+    if (newStatus === "cancelled") {
+      setCancelModal({
+        appointmentId,
+      });
+
+      return;
+    }
+
+    await updateAppointmentStatus(appointmentId, newStatus);
+  };
+
+  const confirmCancelAppointment = async () => {
+    const appointmentId = cancelModal.appointmentId;
+
+    if (!appointmentId) return;
+
+    await updateAppointmentStatus(appointmentId, "cancelled");
+
+    setCancelModal({
+      appointmentId: null,
+    });
+  };
+
+  const closeCancelModal = () => {
+    setCancelModal({
+      appointmentId: null,
+    });
+  };
+
   const openPaymentModal = async (appointment) => {
     if (!appointment.patient_id) {
-      window.alert("Patient ID is missing from appointment data");
+      showMessage(
+        "Payment unavailable",
+        "Patient ID is missing from appointment data",
+      );
+
       return;
     }
 
@@ -294,7 +344,11 @@ function DoctorSchedule() {
       const invoice = res.data?.invoice;
 
       if (!invoice) {
-        window.alert("Failed to prepare treatment invoice");
+        showMessage(
+          "Payment unavailable",
+          "Failed to prepare treatment invoice",
+        );
+
         return;
       }
 
@@ -306,7 +360,8 @@ function DoctorSchedule() {
         String(invoice.status || "").toLowerCase() === "paid" ||
         remainingAmount <= 0
       ) {
-        window.alert("This treatment is already fully paid");
+        showMessage("Payment complete", "This treatment is already fully paid");
+
         return;
       }
 
@@ -325,7 +380,8 @@ function DoctorSchedule() {
         error.response?.data || error,
       );
 
-      window.alert(
+      showMessage(
+        "Payment unavailable",
         error.response?.data?.error ||
           error.response?.data?.message ||
           "Failed to prepare treatment invoice",
@@ -841,6 +897,31 @@ function DoctorSchedule() {
           )}
         </section>
       </main>
+
+      <AppModal
+        open={Boolean(cancelModal.appointmentId)}
+        title="Cancel Appointment"
+        message="Are you sure you want to cancel this appointment?"
+        confirmText="Yes, Cancel"
+        cancelText="Keep Appointment"
+        showCancel
+        danger
+        loading={
+          Boolean(cancelModal.appointmentId) &&
+          Boolean(statusRequests[cancelModal.appointmentId]?.saving)
+        }
+        onConfirm={confirmCancelAppointment}
+        onCancel={closeCancelModal}
+      />
+
+      <AppModal
+        open={messageModal.open}
+        title={messageModal.title}
+        message={messageModal.message}
+        confirmText="OK"
+        onConfirm={closeMessageModal}
+        onCancel={closeMessageModal}
+      />
     </div>
   );
 }
