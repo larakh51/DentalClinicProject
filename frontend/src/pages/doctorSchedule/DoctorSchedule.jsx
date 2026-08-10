@@ -125,7 +125,12 @@ function DoctorSchedule() {
     const treatment = String(appointment.treatment_type || "").toLowerCase();
 
     const status = String(appointment.status || "").toLowerCase();
+
     const appointmentDate = formatInputDate(appointment.date);
+
+    if (status === "completed") {
+      return false;
+    }
 
     const matchesSearch =
       patientName.includes(search) ||
@@ -142,13 +147,18 @@ function DoctorSchedule() {
   });
 
   const sortedFilteredAppointments = [...filteredAppointments].sort((a, b) => {
-    const dateDifference = new Date(b.date) - new Date(a.date);
+    const aDate = formatInputDate(a.date);
+    const bDate = formatInputDate(b.date);
 
-    if (dateDifference !== 0) {
-      return dateDifference;
-    }
+    const aDateTime = new Date(
+      `${aDate}T${String(a.time || "00:00").slice(0, 8)}`,
+    );
 
-    return String(b.time || "").localeCompare(String(a.time || ""));
+    const bDateTime = new Date(
+      `${bDate}T${String(b.time || "00:00").slice(0, 8)}`,
+    );
+
+    return aDateTime - bDateTime;
   });
 
   const totalPages = Math.ceil(
@@ -186,7 +196,7 @@ function DoctorSchedule() {
   );
 
   const sortedDates = Object.keys(groupedAppointments).sort(
-    (a, b) => new Date(b) - new Date(a),
+    (a, b) => new Date(a) - new Date(b),
   );
 
   const formatFullDate = (date) => {
@@ -549,7 +559,6 @@ function DoctorSchedule() {
                   <option value="all">All</option>
                   <option value="scheduled">Scheduled</option>
                   <option value="confirmed">Confirmed</option>
-                  <option value="completed">Completed</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>
