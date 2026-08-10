@@ -6,10 +6,12 @@ import {
   Download,
   CreditCard,
 } from "lucide-react";
+import { jsPDF } from "jspdf";
 
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import Sidebar from "../../components/sidebar/Sidebar";
+import clinicLogo from "../../assets/khoury-dental-logo.png.png";
 import styles from "./payments.module.css";
 
 const INVOICES_PER_PAGE = 7;
@@ -97,34 +99,229 @@ function Payments() {
     return new Date(date).toLocaleDateString("en-GB");
   };
 
-  const handleDownloadInvoice = (invoice) => {
-    const invoiceContent = `
-Dental Clinic Invoice
+  const loadLogoImage = () => {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
 
-Invoice ID: #${invoice.id}
-Patient: ${user?.firstName || ""} ${user?.lastName || ""}
-Date: ${formatDate(invoice.date)}
-Description: ${getInvoiceDescription(invoice)}
-Amount: ₪${invoice.amount}
-Status: ${invoice.status}
-
-Thank you for choosing Dental Clinic.
-`;
-
-    const blob = new Blob([invoiceContent], {
-      type: "text/plain;charset=utf-8",
+      image.onload = () => resolve(image);
+      image.onerror = reject;
+      image.src = clinicLogo;
     });
+  };
 
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
+  const handleDownloadInvoice = async (invoice) => {
+    try {
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
 
-    link.href = url;
-    link.download = `invoice-${invoice.id}.txt`;
-    document.body.appendChild(link);
-    link.click();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
 
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+      const primaryColor = [0, 145, 157];
+      const darkColor = [23, 45, 58];
+      const lightBackground = [244, 249, 250];
+      const borderColor = [220, 227, 230];
+      const grayText = [100, 110, 116];
+
+      const invoiceAmount = Number(invoice.amount || 0).toFixed(2);
+
+      const patientName =
+        invoice.patient_name ||
+        `${user?.firstName || ""} ${user?.lastName || ""}`.trim() ||
+        "Patient";
+
+      const description = getInvoiceDescription(invoice);
+
+      const status = String(invoice.status || "unpaid").toUpperCase();
+
+      doc.setProperties({
+        title: `Invoice ${invoice.id}`,
+        subject: "Dental Clinic Invoice",
+        author: "Khoury Dental Art",
+        creator: "Khoury Dental Art",
+      });
+
+      const logoImage = await loadLogoImage();
+
+      doc.addImage(logoImage, "PNG", 15, 12, 62, 37);
+
+      doc.setTextColor(...darkColor);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(27);
+      doc.text("INVOICE", pageWidth - 15, 24, {
+        align: "right",
+      });
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(...grayText);
+
+      doc.text(`Invoice #${invoice.id}`, pageWidth - 15, 32, {
+        align: "right",
+      });
+
+      doc.text(`Issued: ${formatDate(invoice.date)}`, pageWidth - 15, 38, {
+        align: "right",
+      });
+
+      doc.setDrawColor(...primaryColor);
+      doc.setLineWidth(0.8);
+      doc.line(15, 55, pageWidth - 15, 55);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(...primaryColor);
+      doc.text("BILL TO", 15, 70);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.setTextColor(...darkColor);
+      doc.text(patientName, 15, 79);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(...grayText);
+      doc.text("Patient", 15, 85);
+
+      doc.setFillColor(...lightBackground);
+      doc.setDrawColor(...borderColor);
+
+      doc.roundedRect(pageWidth - 75, 67, 60, 21, 2, 2, "FD");
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(...grayText);
+      doc.text("INVOICE STATUS", pageWidth - 70, 75);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(...darkColor);
+      doc.text(status, pageWidth - 70, 82);
+
+      const tableTop = 105;
+
+      doc.setFillColor(...primaryColor);
+      doc.roundedRect(15, tableTop, pageWidth - 30, 12, 2, 2, "F");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(255, 255, 255);
+
+      doc.text("DESCRIPTION", 20, tableTop + 8);
+      doc.text("DATE", 125, tableTop + 8);
+      doc.text("AMOUNT", pageWidth - 20, tableTop + 8, {
+        align: "right",
+      });
+
+      doc.setFillColor(255, 255, 255);
+      doc.setDrawColor(...borderColor);
+
+      doc.roundedRect(15, tableTop + 15, pageWidth - 30, 25, 2, 2, "FD");
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(...darkColor);
+
+      const descriptionLines = doc.splitTextToSize(description, 90);
+
+      doc.text(descriptionLines, 20, tableTop + 25);
+
+      doc.text(formatDate(invoice.date), 125, tableTop + 25);
+
+      doc.setFont("helvetica", "bold");
+
+      doc.text(`ILS ${invoiceAmount}`, pageWidth - 20, tableTop + 25, {
+        align: "right",
+      });
+
+      const summaryTop = tableTop + 58;
+
+      doc.setFillColor(...lightBackground);
+      doc.roundedRect(pageWidth - 90, summaryTop, 75, 38, 3, 3, "F");
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(...grayText);
+
+      doc.text("Subtotal", pageWidth - 84, summaryTop + 11);
+
+      doc.setTextColor(...darkColor);
+
+      doc.text(`ILS ${invoiceAmount}`, pageWidth - 21, summaryTop + 11, {
+        align: "right",
+      });
+
+      doc.setDrawColor(...borderColor);
+      doc.line(
+        pageWidth - 84,
+        summaryTop + 18,
+        pageWidth - 21,
+        summaryTop + 18,
+      );
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(...primaryColor);
+
+      doc.text("TOTAL", pageWidth - 84, summaryTop + 29);
+
+      doc.text(`ILS ${invoiceAmount}`, pageWidth - 21, summaryTop + 29, {
+        align: "right",
+      });
+
+      const thankYouTop = summaryTop + 60;
+
+      doc.setDrawColor(...borderColor);
+      doc.line(15, thankYouTop, pageWidth - 15, thankYouTop);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.setTextColor(...primaryColor);
+      doc.text(
+        "Thank you for choosing Khoury Dental Art",
+        pageWidth / 2,
+        thankYouTop + 15,
+        {
+          align: "center",
+        },
+      );
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(...grayText);
+      doc.text(
+        "We appreciate your trust in our dental care.",
+        pageWidth / 2,
+        thankYouTop + 22,
+        {
+          align: "center",
+        },
+      );
+
+      doc.setFillColor(...primaryColor);
+      doc.rect(0, pageHeight - 12, pageWidth, 12, "F");
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(255, 255, 255);
+
+      doc.text(
+        `Invoice #${invoice.id} | Khoury Dental Art`,
+        pageWidth / 2,
+        pageHeight - 5,
+        {
+          align: "center",
+        },
+      );
+
+      doc.save(`Khoury-Dental-Invoice-${invoice.id}.pdf`);
+    } catch (error) {
+      console.log("Failed to generate invoice PDF", error);
+      setError("Failed to generate invoice PDF");
+    }
   };
 
   return (
@@ -221,6 +418,7 @@ Thank you for choosing Dental Clinic.
                         type="button"
                         className={styles.downloadBtn}
                         onClick={() => handleDownloadInvoice(invoice)}
+                        title="Download PDF invoice"
                       >
                         <Download size={17} />
                       </button>
