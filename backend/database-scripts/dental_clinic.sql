@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 28, 2026 at 05:39 PM
+-- Generation Time: Aug 06, 2026 at 08:18 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -20,8 +20,6 @@ SET time_zone = "+00:00";
 --
 -- Database: `dental_clinic`
 --
-CREATE DATABASE IF NOT EXISTS `dental_clinic` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE `dental_clinic`;
 
 -- --------------------------------------------------------
 
@@ -38,6 +36,8 @@ CREATE TABLE `appointments` (
   `date` date NOT NULL,
   `time` time NOT NULL,
   `treatment_type` varchar(150) NOT NULL,
+  `booked_price` decimal(10,2) DEFAULT NULL,
+  `booked_vat_percentage` decimal(5,2) DEFAULT NULL,
   `status` enum('scheduled','completed','cancelled','confirmed') NOT NULL,
   `notes` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
@@ -51,53 +51,64 @@ CREATE TABLE `appointments` (
 -- Dumping data for table `appointments`
 --
 
-INSERT INTO `appointments` (`id`, `patient_id`, `patient_name`, `doctor_id`, `doctor_name`, `date`, `time`, `treatment_type`, `status`, `notes`, `created_at`, `updated_at`, `treatment_type_id`, `duration_minutes`, `end_time`) VALUES
-('a1', 'p1', 'Nour Ali', 'd1', 'Sami Khoury', '2026-04-25', '09:00:00', 'Cleaning & Check-up', 'confirmed', 'First visit', '2026-04-23 10:17:38', '2026-06-02 11:39:07', NULL, 30, '09:30:00'),
-('a10', 'p10', 'Yousef Ghattas', 'd3', 'Adam Saleh', '2026-04-28', '09:00:00', 'Crown Consultation', 'confirmed', NULL, '2026-04-23 10:17:38', '2026-06-02 11:39:07', NULL, 30, '09:30:00'),
-('a11', 'p11', 'Amal Habib', 'd2', 'Lina Nassar', '2026-04-28', '09:45:00', 'Root Canal', 'scheduled', NULL, '2026-04-23 10:17:38', '2026-06-02 11:39:07', NULL, 30, '10:15:00'),
-('a12', 'p12', 'Fadi Nakhleh', 'd1', 'Sami Khoury', '2026-04-28', '14:00:00', 'Filling', 'scheduled', NULL, '2026-04-23 10:17:38', '2026-06-02 11:39:07', NULL, 30, '14:30:00'),
-('a13', 'p13', 'Huda Saba', 'd3', 'Adam Saleh', '2026-04-29', '10:00:00', 'Cleaning & Check-up', 'scheduled', NULL, '2026-04-23 10:17:38', '2026-06-02 11:39:07', NULL, 30, '10:30:00'),
-('a14', 'p14', 'Tarek Boulos', 'd2', 'Lina Nassar', '2026-04-29', '11:30:00', 'Extraction', 'confirmed', NULL, '2026-04-23 10:17:38', '2026-06-02 11:39:07', NULL, 30, '12:00:00'),
-('a15', 'p15', 'Mira Shahin', 'd1', 'Sami Khoury', '2026-04-29', '12:15:00', 'Whitening', 'scheduled', NULL, '2026-04-23 10:17:38', '2026-06-02 11:39:07', NULL, 30, '12:45:00'),
-('a16', 'p1', 'Nour Ali', 'd2', 'Lina Nassar', '2026-04-15', '09:00:00', 'Cleaning & Check-up', 'completed', 'Completed successfully', '2026-04-23 10:17:38', '2026-06-02 11:39:07', NULL, 30, '09:30:00'),
-('a17', 'p2', 'Sara Kanaan', 'd1', 'Sami Khoury', '2026-04-14', '10:30:00', 'Filling', 'completed', NULL, '2026-04-23 10:17:38', '2026-06-02 11:39:07', NULL, 30, '11:00:00'),
-('a1778579975903', 'p17781529662076677', 'Lara kh', 'd2', 'Dr. Lina Nassar', '2026-05-23', '14:30:00', 'Cleaning & Check-up', 'scheduled', NULL, '2026-05-12 09:59:35', '2026-06-02 11:39:07', NULL, 30, '15:00:00'),
-('a1778580255162', 'p17781529662076677', 'Lara kh', 'd2', 'Dr. Lina Nassar', '2026-05-22', '14:00:00', 'Root Canal', 'scheduled', NULL, '2026-05-12 10:04:15', '2026-06-02 11:39:07', NULL, 30, '14:30:00'),
-('a1778586770508', 'p17781529662076677', 'Lara kh', 'd2', 'Dr. Lina Nassar', '2026-05-20', '11:30:00', 'Filling', 'cancelled', NULL, '2026-05-12 11:52:50', '2026-06-02 11:39:07', NULL, 30, '12:00:00'),
-('a1778589108135', 'p17781529662076677', 'Lara kh', 'd3', 'Dr. Adam Saleh', '2026-05-20', '12:00:00', 'Tooth Extraction', 'cancelled', NULL, '2026-05-12 12:31:48', '2026-06-02 11:39:07', NULL, 30, '12:30:00'),
-('a1778665030944', 'p17781529662076677', 'Lara kh', 'd1', 'Dr. Sami Haddad', '2026-05-14', '13:30:00', 'Filling', 'cancelled', NULL, '2026-05-13 09:37:10', '2026-06-02 11:39:07', NULL, 30, '14:00:00'),
-('a1780403315201', 'p17781529662076677', 'Lara kh', 'd178040318910469', 'Dr. aviv aviv', '2026-06-03', '10:30:00', 'Root Canal', 'cancelled', NULL, '2026-06-02 12:28:35', '2026-06-02 13:28:34', NULL, 30, NULL),
-('a1780403352604', 'p17781529662076677', 'Lara kh', 'd178040318910469', 'Dr. aviv aviv', '2026-06-04', '11:30:00', 'Tooth Extraction', 'cancelled', 'm7md mytwajdsh', '2026-06-02 12:29:12', '2026-06-02 13:28:40', NULL, 30, NULL),
-('a1780403786641', 'p17781529662076677', 'Lara kh', 'd3', 'Dr. Adam Saleh', '2026-06-03', '09:00:00', 'Cleaning & Check-up', 'cancelled', NULL, '2026-06-02 12:36:26', '2026-06-02 13:38:33', NULL, 30, '09:30:00'),
-('a1780406895312', 'p17781529662076677', 'Lara kh', 'd3', 'Dr. Adam Saleh', '2026-06-03', '09:30:00', 'Root Canal', 'cancelled', NULL, '2026-06-02 13:28:15', '2026-06-02 13:38:31', 'tt3', 60, '10:30:00'),
-('a1780406940028', 'p17781529662076677', 'Lara kh', 'd178040318910469', 'Dr. aviv aviv', '2026-06-03', '09:00:00', 'Root Canal', 'scheduled', NULL, '2026-06-02 13:29:00', '2026-06-02 13:29:00', 'tt3', 60, '10:00:00'),
-('a1780406963511', 'p17781529662076677', 'Lara kh', 'd178040318910469', 'Dr. aviv aviv', '2026-06-03', '10:00:00', 'Filling', 'scheduled', NULL, '2026-06-02 13:29:23', '2026-06-02 13:29:23', 'tt2', 30, '10:30:00'),
-('a1780408241028', 'p17781529662076677', 'Lara kh', 'd178040318910469', 'Dr. aviv aviv', '2026-06-03', '11:00:00', 'Consultation', 'scheduled', NULL, '2026-06-02 13:50:41', '2026-06-02 13:50:41', 'tt6', 10, '11:10:00'),
-('a1780999141153', 'p17781529662076677', 'Lara kh', 'd178040318910469', 'Dr. aviv aviv', '2026-06-10', '09:00:00', 'Root Canal', 'cancelled', NULL, '2026-06-09 09:59:01', '2026-06-09 10:01:38', 'tt3', 60, '10:00:00'),
-('a1784717229658', 'p16', 'Mohammed Rayan', 'd3', 'Dr. Adam Saleh', '2026-07-22', '14:00:00', 'Consultation', 'scheduled', NULL, '2026-07-22 10:47:09', '2026-07-22 10:47:09', 'tt6', 10, '14:10:00'),
-('a1784717270124', 'p16', 'Mohammed Rayan', 'd3', 'Dr. Adam Saleh', '2026-07-22', '14:30:00', 'Consultation', 'scheduled', NULL, '2026-07-22 10:47:50', '2026-07-22 10:47:50', 'tt6', 10, '14:40:00'),
-('a1784727208552', 'p17847259248565537', 'Eessa Lwabne', 'd3', 'Dr. Adam Saleh', '2026-07-23', '16:00:00', 'Cleaning & Check-up', 'cancelled', NULL, '2026-07-22 13:33:28', '2026-07-22 13:33:50', 'tt1', 30, '16:30:00'),
-('a1784727369155', 'p17847259248565537', 'Eessa Lwabne', 'd3', 'Dr. Adam Saleh', '2026-07-22', '16:00:00', 'Cleaning & Check-up', 'scheduled', NULL, '2026-07-22 13:36:09', '2026-07-27 18:55:04', 'tt1', 30, '16:30:00'),
-('a1784727449294', 'p17847259248565537', 'Eessa Lwabne', 'd3', 'Dr. Adam Saleh', '2026-07-23', '15:00:00', 'Cleaning & Check-up', 'scheduled', NULL, '2026-07-22 13:37:29', '2026-07-22 13:37:29', 'tt1', 30, '15:30:00'),
-('a1784730236038', 'p17847259248565537', 'Eessa Lwabne', 'd17799719098443667', 'Dr. Hasan Omar', '2026-07-23', '09:00:00', 'Consultation', 'completed', NULL, '2026-07-22 14:23:56', '2026-07-28 10:30:33', 'tt6', 10, '09:10:00'),
-('a1785172198425', 'p17781529662076677', 'Lara kh', 'd17799719098443667', 'Dr. Hasan Omar', '2026-07-26', '11:50:00', 'Cleaning & Check-up', 'completed', NULL, '2026-07-27 17:09:58', '2026-07-28 10:30:57', 'tt1', 30, '12:20:00'),
-('a1785176956069', 'p15', 'Mira Shahin', 'd17799719098443667', 'Dr. Hasan Omar', '2026-07-28', '09:00:00', 'Filling', 'completed', NULL, '2026-07-27 18:29:16', '2026-07-28 15:30:53', 'tt2', 30, '09:30:00'),
-('a1785177885931', 'p3', 'Omar Hanna', 'd17799719098443667', 'Dr. Hasan Omar', '2026-07-26', '10:40:00', 'Consultation', 'completed', NULL, '2026-07-27 18:44:45', '2026-07-28 10:31:18', 'tt6', 10, '10:50:00'),
-('a1785178693201', 'p17847259248565537', 'Eessa Lwabne', 'd17799719098443667', 'Dr. Hasan Omar', '2026-07-27', '13:40:00', 'Root Canal', 'completed', NULL, '2026-07-27 18:58:13', '2026-07-27 19:47:59', 'tt3', 60, '14:40:00'),
-('a1785181560835', 'p3', 'Omar Hanna', 'd17799719098443667', 'Dr. Hasan Omar', '2026-07-30', '11:10:00', 'Filling', 'confirmed', NULL, '2026-07-27 19:46:00', '2026-07-27 19:46:06', 'tt2', 30, '11:40:00'),
-('a18', 'p3', 'Omar Hanna', 'd3', 'Adam Saleh', '2026-04-13', '11:00:00', 'Root Canal', 'completed', 'Stage 1 done', '2026-04-23 10:17:38', '2026-06-02 11:39:07', NULL, 30, '11:30:00'),
-('a19', 'p4', 'Maya Issa', 'd2', 'Lina Nassar', '2026-04-12', '13:00:00', 'Whitening', 'completed', NULL, '2026-04-23 10:17:38', '2026-06-02 11:39:07', NULL, 30, '13:30:00'),
-('a2', 'p2', 'Sara Kanaan', 'd2', 'Lina Nassar', '2026-04-25', '10:00:00', 'Filling', 'scheduled', NULL, '2026-04-23 10:17:38', '2026-06-02 11:39:07', NULL, 30, '10:30:00'),
-('a20', 'p5', 'Leen Jaber', 'd1', 'Sami Khoury', '2026-04-11', '09:30:00', 'Cleaning & Check-up', 'cancelled', 'Patient requested cancellation', '2026-04-23 10:17:38', '2026-06-02 11:39:07', NULL, 30, '10:00:00'),
-('a21', 'p6', 'Karim Salem', 'd3', 'Adam Saleh', '2026-04-10', '12:00:00', 'Extraction', 'completed', NULL, '2026-04-23 10:17:38', '2026-06-02 11:39:07', NULL, 30, '12:30:00'),
-('a22', 'p7', 'Rana Toma', 'd2', 'Lina Nassar', '2026-04-09', '15:00:00', 'Braces Consultation', 'completed', NULL, '2026-04-23 10:17:38', '2026-06-02 11:39:07', NULL, 30, '15:30:00'),
-('a3', 'p3', 'Omar Hanna', 'd1', 'Sami Khoury', '2026-04-25', '11:00:00', 'Root Canal', 'scheduled', 'Tooth pain', '2026-04-23 10:17:38', '2026-06-02 11:39:07', NULL, 30, '11:30:00'),
-('a4', 'p4', 'Maya Issa', 'd3', 'Adam Saleh', '2026-04-26', '09:30:00', 'Whitening', 'confirmed', NULL, '2026-04-23 10:17:38', '2026-06-02 11:39:07', NULL, 30, '10:00:00'),
-('a5', 'p5', 'Leen Jaber', 'd2', 'Lina Nassar', '2026-04-26', '12:00:00', 'Cleaning & Check-up', 'scheduled', NULL, '2026-04-23 10:17:38', '2026-06-02 11:39:07', NULL, 30, '12:30:00'),
-('a6', 'p6', 'Karim Salem', 'd1', 'Sami Khoury', '2026-04-26', '13:00:00', 'Extraction', 'scheduled', 'Wisdom tooth', '2026-04-23 10:17:38', '2026-06-02 11:39:07', NULL, 30, '13:30:00'),
-('a7', 'p7', 'Rana Toma', 'd3', 'Adam Saleh', '2026-04-27', '09:00:00', 'Braces Consultation', 'confirmed', NULL, '2026-04-23 10:17:38', '2026-06-02 11:39:07', NULL, 30, '09:30:00'),
-('a8', 'p8', 'Jad Mansour', 'd2', 'Lina Nassar', '2026-04-27', '10:30:00', 'Filling', 'scheduled', NULL, '2026-04-23 10:17:38', '2026-06-02 11:39:07', NULL, 30, '11:00:00'),
-('a9', 'p9', 'Dana Farah', 'd1', 'Sami Khoury', '2026-04-27', '11:15:00', 'Cleaning & Check-up', 'scheduled', NULL, '2026-04-23 10:17:38', '2026-06-02 11:39:07', NULL, 30, '11:45:00');
+INSERT INTO `appointments` (`id`, `patient_id`, `patient_name`, `doctor_id`, `doctor_name`, `date`, `time`, `treatment_type`, `booked_price`, `booked_vat_percentage`, `status`, `notes`, `created_at`, `updated_at`, `treatment_type_id`, `duration_minutes`, `end_time`) VALUES
+('a1', 'p1', 'Nour Ali', 'd1', 'Sami Khoury', '2026-04-25', '09:00:00', 'Cleaning & Check-up', NULL, 18.00, 'confirmed', 'First visit', '2026-04-23 10:17:38', '2026-08-06 17:35:56', NULL, 30, '09:30:00'),
+('a10', 'p10', 'Yousef Ghattas', 'd3', 'Adam Saleh', '2026-04-28', '09:00:00', 'Crown Consultation', NULL, 18.00, 'confirmed', NULL, '2026-04-23 10:17:38', '2026-08-06 17:35:56', NULL, 30, '09:30:00'),
+('a11', 'p11', 'Amal Habib', 'd2', 'Lina Nassar', '2026-04-28', '09:45:00', 'Root Canal', NULL, 18.00, 'scheduled', NULL, '2026-04-23 10:17:38', '2026-08-06 17:35:56', NULL, 30, '10:15:00'),
+('a12', 'p12', 'Fadi Nakhleh', 'd1', 'Sami Khoury', '2026-04-28', '14:00:00', 'Filling', NULL, 18.00, 'scheduled', NULL, '2026-04-23 10:17:38', '2026-08-06 17:35:56', NULL, 30, '14:30:00'),
+('a13', 'p13', 'Huda Saba', 'd3', 'Adam Saleh', '2026-04-29', '10:00:00', 'Cleaning & Check-up', NULL, 18.00, 'scheduled', NULL, '2026-04-23 10:17:38', '2026-08-06 17:35:56', NULL, 30, '10:30:00'),
+('a14', 'p14', 'Tarek Boulos', 'd2', 'Lina Nassar', '2026-04-29', '11:30:00', 'Extraction', NULL, 18.00, 'confirmed', NULL, '2026-04-23 10:17:38', '2026-08-06 17:35:56', NULL, 30, '12:00:00'),
+('a15', 'p15', 'Mira Shahin', 'd1', 'Sami Khoury', '2026-04-29', '12:15:00', 'Whitening', NULL, 18.00, 'scheduled', NULL, '2026-04-23 10:17:38', '2026-08-06 17:35:56', NULL, 30, '12:45:00'),
+('a16', 'p1', 'Nour Ali', 'd2', 'Lina Nassar', '2026-04-15', '09:00:00', 'Cleaning & Check-up', NULL, 18.00, 'completed', 'Completed successfully', '2026-04-23 10:17:38', '2026-08-06 17:35:56', NULL, 30, '09:30:00'),
+('a17', 'p2', 'Sara Kanaan', 'd1', 'Sami Khoury', '2026-04-14', '10:30:00', 'Filling', NULL, 18.00, 'completed', NULL, '2026-04-23 10:17:38', '2026-08-06 17:35:56', NULL, 30, '11:00:00'),
+('a1778579975903', 'p17781529662076677', 'Lara kh', 'd2', 'Dr. Lina Nassar', '2026-05-23', '14:30:00', 'Cleaning & Check-up', NULL, 18.00, 'scheduled', NULL, '2026-05-12 09:59:35', '2026-08-06 17:35:56', NULL, 30, '15:00:00'),
+('a1778580255162', 'p17781529662076677', 'Lara kh', 'd2', 'Dr. Lina Nassar', '2026-05-22', '14:00:00', 'Root Canal', NULL, 18.00, 'scheduled', NULL, '2026-05-12 10:04:15', '2026-08-06 17:35:56', NULL, 30, '14:30:00'),
+('a1778586770508', 'p17781529662076677', 'Lara kh', 'd2', 'Dr. Lina Nassar', '2026-05-20', '11:30:00', 'Filling', NULL, 18.00, 'cancelled', NULL, '2026-05-12 11:52:50', '2026-08-06 17:35:56', NULL, 30, '12:00:00'),
+('a1778589108135', 'p17781529662076677', 'Lara kh', 'd3', 'Dr. Adam Saleh', '2026-05-20', '12:00:00', 'Tooth Extraction', NULL, 18.00, 'cancelled', NULL, '2026-05-12 12:31:48', '2026-08-06 17:35:56', NULL, 30, '12:30:00'),
+('a1778665030944', 'p17781529662076677', 'Lara kh', 'd1', 'Dr. Sami Haddad', '2026-05-14', '13:30:00', 'Filling', NULL, 18.00, 'cancelled', NULL, '2026-05-13 09:37:10', '2026-08-06 17:35:56', NULL, 30, '14:00:00'),
+('a1780403315201', 'p17781529662076677', 'Lara kh', 'd178040318910469', 'Dr. aviv aviv', '2026-06-03', '10:30:00', 'Root Canal', NULL, 18.00, 'cancelled', NULL, '2026-06-02 12:28:35', '2026-08-06 17:35:56', NULL, 30, NULL),
+('a1780403352604', 'p17781529662076677', 'Lara kh', 'd178040318910469', 'Dr. aviv aviv', '2026-06-04', '11:30:00', 'Tooth Extraction', NULL, 18.00, 'cancelled', 'm7md mytwajdsh', '2026-06-02 12:29:12', '2026-08-06 17:35:56', NULL, 30, NULL),
+('a1780403786641', 'p17781529662076677', 'Lara kh', 'd3', 'Dr. Adam Saleh', '2026-06-03', '09:00:00', 'Cleaning & Check-up', NULL, 18.00, 'cancelled', NULL, '2026-06-02 12:36:26', '2026-08-06 17:35:56', NULL, 30, '09:30:00'),
+('a1780406895312', 'p17781529662076677', 'Lara kh', 'd3', 'Dr. Adam Saleh', '2026-06-03', '09:30:00', 'Root Canal', 600.00, 18.00, 'cancelled', NULL, '2026-06-02 13:28:15', '2026-08-06 17:35:56', 'tt3', 60, '10:30:00'),
+('a1780406940028', 'p17781529662076677', 'Lara kh', 'd178040318910469', 'Dr. aviv aviv', '2026-06-03', '09:00:00', 'Root Canal', 600.00, 18.00, 'scheduled', NULL, '2026-06-02 13:29:00', '2026-08-06 17:35:56', 'tt3', 60, '10:00:00'),
+('a1780406963511', 'p17781529662076677', 'Lara kh', 'd178040318910469', 'Dr. aviv aviv', '2026-06-03', '10:00:00', 'Filling', 200.00, 18.00, 'scheduled', NULL, '2026-06-02 13:29:23', '2026-08-06 17:35:56', 'tt2', 30, '10:30:00'),
+('a1780408241028', 'p17781529662076677', 'Lara kh', 'd178040318910469', 'Dr. aviv aviv', '2026-06-03', '11:00:00', 'Consultation', 200.00, 18.00, 'scheduled', NULL, '2026-06-02 13:50:41', '2026-08-06 17:35:56', 'tt6', 10, '11:10:00'),
+('a1780999141153', 'p17781529662076677', 'Lara kh', 'd178040318910469', 'Dr. aviv aviv', '2026-06-10', '09:00:00', 'Root Canal', 600.00, 18.00, 'cancelled', NULL, '2026-06-09 09:59:01', '2026-08-06 17:35:56', 'tt3', 60, '10:00:00'),
+('a1784717229658', 'p16', 'Mohammed Rayan', 'd3', 'Dr. Adam Saleh', '2026-07-22', '14:00:00', 'Consultation', 200.00, 18.00, 'scheduled', NULL, '2026-07-22 10:47:09', '2026-08-06 17:35:56', 'tt6', 10, '14:10:00'),
+('a1784717270124', 'p16', 'Mohammed Rayan', 'd3', 'Dr. Adam Saleh', '2026-07-22', '14:30:00', 'Consultation', 200.00, 18.00, 'scheduled', NULL, '2026-07-22 10:47:50', '2026-08-06 17:35:56', 'tt6', 10, '14:40:00'),
+('a1784727208552', 'p17847259248565537', 'Eessa Lwabne', 'd3', 'Dr. Adam Saleh', '2026-07-23', '16:00:00', 'Cleaning & Check-up', 400.00, 18.00, 'cancelled', NULL, '2026-07-22 13:33:28', '2026-08-06 17:35:56', 'tt1', 30, '16:30:00'),
+('a1784727369155', 'p17847259248565537', 'Eessa Lwabne', 'd3', 'Dr. Adam Saleh', '2026-07-22', '16:00:00', 'Cleaning & Check-up', 400.00, 18.00, 'scheduled', NULL, '2026-07-22 13:36:09', '2026-08-06 17:35:56', 'tt1', 30, '16:30:00'),
+('a1784727449294', 'p17847259248565537', 'Eessa Lwabne', 'd3', 'Dr. Adam Saleh', '2026-07-23', '15:00:00', 'Cleaning & Check-up', 400.00, 18.00, 'scheduled', NULL, '2026-07-22 13:37:29', '2026-08-06 17:35:56', 'tt1', 30, '15:30:00'),
+('a1784730236038', 'p17847259248565537', 'Eessa Lwabne', 'd17799719098443667', 'Dr. Hasan Omar', '2026-07-23', '09:00:00', 'Consultation', 200.00, 18.00, 'completed', NULL, '2026-07-22 14:23:56', '2026-08-06 17:35:56', 'tt6', 10, '09:10:00'),
+('a1785172198425', 'p17781529662076677', 'Lara kh', 'd17799719098443667', 'Dr. Hasan Omar', '2026-07-26', '11:50:00', 'Cleaning & Check-up', 400.00, 18.00, 'completed', NULL, '2026-07-27 17:09:58', '2026-08-06 17:35:56', 'tt1', 30, '12:20:00'),
+('a1785176956069', 'p15', 'Mira Shahin', 'd17799719098443667', 'Dr. Hasan Omar', '2026-07-28', '09:00:00', 'Filling', 200.00, 18.00, 'completed', NULL, '2026-07-27 18:29:16', '2026-08-06 17:35:56', 'tt2', 30, '09:30:00'),
+('a1785177885931', 'p3', 'Omar Hanna', 'd17799719098443667', 'Dr. Hasan Omar', '2026-07-26', '10:40:00', 'Consultation', 200.00, 18.00, 'completed', NULL, '2026-07-27 18:44:45', '2026-08-06 17:35:56', 'tt6', 10, '10:50:00'),
+('a1785178693201', 'p17847259248565537', 'Eessa Lwabne', 'd17799719098443667', 'Dr. Hasan Omar', '2026-07-27', '13:40:00', 'Root Canal', 600.00, 18.00, 'completed', NULL, '2026-07-27 18:58:13', '2026-08-06 17:35:56', 'tt3', 60, '14:40:00'),
+('a1785181560835', 'p3', 'Omar Hanna', 'd17799719098443667', 'Dr. Hasan Omar', '2026-07-30', '11:10:00', 'Filling', 200.00, 18.00, 'completed', NULL, '2026-07-27 19:46:00', '2026-08-06 17:35:56', 'tt2', 30, '11:40:00'),
+('a1785267078921', 'p3', 'Omar Hanna', 'd17799719098443667', 'Dr. Hasan Omar', '2026-07-29', '11:20:00', 'Root Canal', 600.00, 18.00, 'completed', NULL, '2026-07-28 19:31:18', '2026-08-06 17:35:56', 'tt3', 60, '12:20:00'),
+('a1785951641753', 'p17781529662076677', 'Lara kh', 'd2', 'Dr. Lina Nassar', '2026-08-06', '10:20:00', 'Consultation', 200.00, 18.00, 'confirmed', NULL, '2026-08-05 17:40:41', '2026-08-06 17:35:56', 'tt6', 10, '10:30:00'),
+('a1785952692741', 'p17781529662076677', 'Lara kh', 'd17799719098443667', 'Dr. Hasan Omar', '2026-08-07', '09:20:00', 'Filling', 200.00, 18.00, 'cancelled', NULL, '2026-08-05 17:58:12', '2026-08-06 17:35:56', 'tt2', 30, '09:50:00'),
+('a1785953698940', 'p17781529662076677', 'Lara kh', 'd17799719098443667', 'Dr. Hasan Omar', '2026-08-06', '09:40:00', 'Consultation', 200.00, 18.00, 'completed', NULL, '2026-08-05 18:14:58', '2026-08-06 17:58:12', 'tt6', 10, '09:50:00'),
+('a1786035320963', 'p17781529662076677', 'Lara kh', 'd17799719098443667', 'Dr. Hasan Omar', '2026-08-07', '09:20:00', 'Root Canal', 600.00, 18.00, 'scheduled', NULL, '2026-08-06 16:55:20', '2026-08-06 17:35:56', 'tt3', 60, '10:20:00'),
+('a1786035348589', 'p17781529662076677', 'Lara kh', 'd17799719098443667', 'Dr. Hasan Omar', '2026-08-07', '11:30:00', 'Cleaning & Check-up', 400.00, 18.00, 'confirmed', NULL, '2026-08-06 16:55:48', '2026-08-06 17:58:01', 'tt1', 30, '12:00:00'),
+('a1786035529059', 'p3', 'Omar Hanna', 'd17799719098443667', 'Dr. Hasan Omar', '2026-08-07', '10:30:00', 'Cleaning & Check-up', 400.00, 18.00, 'scheduled', NULL, '2026-08-06 16:58:49', '2026-08-06 17:35:56', 'tt1', 30, '11:00:00'),
+('a1786036074612', 'p17781529662076677', 'Lara kh', 'd17799719098443667', 'Dr. Hasan Omar', '2026-08-09', '09:40:00', 'Root Canal', 600.00, 18.00, 'confirmed', NULL, '2026-08-06 17:07:54', '2026-08-06 17:57:51', 'tt3', 60, '10:40:00'),
+('a1786036123898', 'p17781529662076677', 'Lara kh', 'd17799719098443667', 'Dr. Hasan Omar', '2026-08-09', '10:40:00', 'Cleaning & Check-up', 400.00, 18.00, 'confirmed', NULL, '2026-08-06 17:08:43', '2026-08-06 17:57:49', 'tt1', 30, '11:10:00'),
+('a1786038940239', 'p17781529662076677', 'Lara kh', 'd17799719098443667', 'Dr. Hasan Omar', '2026-08-13', '10:00:00', 'Cleaning & Check-up', 400.00, 18.00, 'confirmed', NULL, '2026-08-06 17:55:40', '2026-08-06 17:57:20', 'tt1', 30, '10:30:00'),
+('a1786039501599', 'p17781529662076677', 'Lara kh', 'd17799719098443667', 'Dr. Hasan Omar', '2026-08-07', '11:00:00', 'Cleaning & Check-up', 400.00, 18.00, 'scheduled', NULL, '2026-08-06 18:05:01', '2026-08-06 18:05:01', 'tt1', 30, '11:30:00'),
+('a18', 'p3', 'Omar Hanna', 'd3', 'Adam Saleh', '2026-04-13', '11:00:00', 'Root Canal', NULL, 18.00, 'completed', 'Stage 1 done', '2026-04-23 10:17:38', '2026-08-06 17:35:56', NULL, 30, '11:30:00'),
+('a19', 'p4', 'Maya Issa', 'd2', 'Lina Nassar', '2026-04-12', '13:00:00', 'Whitening', NULL, 18.00, 'completed', NULL, '2026-04-23 10:17:38', '2026-08-06 17:35:56', NULL, 30, '13:30:00'),
+('a2', 'p2', 'Sara Kanaan', 'd2', 'Lina Nassar', '2026-04-25', '10:00:00', 'Filling', NULL, 18.00, 'scheduled', NULL, '2026-04-23 10:17:38', '2026-08-06 17:35:56', NULL, 30, '10:30:00'),
+('a20', 'p5', 'Leen Jaber', 'd1', 'Sami Khoury', '2026-04-11', '09:30:00', 'Cleaning & Check-up', NULL, 18.00, 'cancelled', 'Patient requested cancellation', '2026-04-23 10:17:38', '2026-08-06 17:35:56', NULL, 30, '10:00:00'),
+('a21', 'p6', 'Karim Salem', 'd3', 'Adam Saleh', '2026-04-10', '12:00:00', 'Extraction', NULL, 18.00, 'completed', NULL, '2026-04-23 10:17:38', '2026-08-06 17:35:56', NULL, 30, '12:30:00'),
+('a22', 'p7', 'Rana Toma', 'd2', 'Lina Nassar', '2026-04-09', '15:00:00', 'Braces Consultation', NULL, 18.00, 'completed', NULL, '2026-04-23 10:17:38', '2026-08-06 17:35:56', NULL, 30, '15:30:00'),
+('a3', 'p3', 'Omar Hanna', 'd1', 'Sami Khoury', '2026-04-25', '11:00:00', 'Root Canal', NULL, 18.00, 'scheduled', 'Tooth pain', '2026-04-23 10:17:38', '2026-08-06 17:35:56', NULL, 30, '11:30:00'),
+('a4', 'p4', 'Maya Issa', 'd3', 'Adam Saleh', '2026-04-26', '09:30:00', 'Whitening', NULL, 18.00, 'confirmed', NULL, '2026-04-23 10:17:38', '2026-08-06 17:35:56', NULL, 30, '10:00:00'),
+('a5', 'p5', 'Leen Jaber', 'd2', 'Lina Nassar', '2026-04-26', '12:00:00', 'Cleaning & Check-up', NULL, 18.00, 'scheduled', NULL, '2026-04-23 10:17:38', '2026-08-06 17:35:56', NULL, 30, '12:30:00'),
+('a6', 'p6', 'Karim Salem', 'd1', 'Sami Khoury', '2026-04-26', '13:00:00', 'Extraction', NULL, 18.00, 'scheduled', 'Wisdom tooth', '2026-04-23 10:17:38', '2026-08-06 17:35:56', NULL, 30, '13:30:00'),
+('a7', 'p7', 'Rana Toma', 'd3', 'Adam Saleh', '2026-04-27', '09:00:00', 'Braces Consultation', NULL, 18.00, 'confirmed', NULL, '2026-04-23 10:17:38', '2026-08-06 17:35:56', NULL, 30, '09:30:00'),
+('a8', 'p8', 'Jad Mansour', 'd2', 'Lina Nassar', '2026-04-27', '10:30:00', 'Filling', NULL, 18.00, 'scheduled', NULL, '2026-04-23 10:17:38', '2026-08-06 17:35:56', NULL, 30, '11:00:00'),
+('a9', 'p9', 'Dana Farah', 'd1', 'Sami Khoury', '2026-04-27', '11:15:00', 'Cleaning & Check-up', NULL, 18.00, 'scheduled', NULL, '2026-04-23 10:17:38', '2026-08-06 17:35:56', NULL, 30, '11:45:00');
 
 -- --------------------------------------------------------
 
@@ -189,7 +200,7 @@ CREATE TABLE `invoices` (
   `patient_name` varchar(201) NOT NULL,
   `date` date NOT NULL,
   `amount` decimal(10,2) NOT NULL,
-  `status` enum('paid','pending','overdue') NOT NULL,
+  `status` enum('paid','pending','overdue','unpaid','partial') NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ;
@@ -208,10 +219,13 @@ INSERT INTO `invoices` (`id`, `patient_id`, `appointment_id`, `patient_name`, `d
 ('inv1785234558589', 'p17847259248565537', 'a1785178693201', 'Eessa Lwabne', '2026-07-27', 600.00, 'paid', '2026-07-28 10:29:18', '2026-07-28 10:29:46'),
 ('inv1785234633656', 'p17847259248565537', 'a1784730236038', 'Eessa Lwabne', '2026-07-23', 200.00, 'paid', '2026-07-28 10:30:33', '2026-07-28 10:30:38'),
 ('inv1785252653122', 'p15', 'a1785176956069', 'Mira Shahin', '2026-07-28', 200.00, 'paid', '2026-07-28 15:30:53', '2026-07-28 15:31:05'),
+('inv1785254123477', 'p3', 'a1785181560835', 'Omar Hanna', '2026-07-30', 200.00, 'paid', '2026-07-28 15:55:23', '2026-07-28 19:30:59'),
 ('inv2', 'p2', NULL, 'Sara Kanaan', '2026-04-14', 350.00, 'paid', '2026-04-23 10:17:38', '2026-07-27 20:33:43'),
 ('inv3', 'p3', NULL, 'Omar Hanna', '2026-04-13', 900.00, 'paid', '2026-04-23 10:17:38', '2026-07-27 20:33:58'),
 ('inv4', 'p4', NULL, 'Maya Issa', '2026-04-12', 600.00, 'paid', '2026-04-23 10:17:38', '2026-04-23 10:17:38'),
 ('inv5', 'p6', NULL, 'Karim Salem', '2026-04-10', 750.00, 'overdue', '2026-04-23 10:17:38', '2026-04-23 10:17:38'),
+('inv52d08db789fb6f77', 'p3', 'a1785267078921', 'Omar Hanna', '2026-07-29', 600.00, 'unpaid', '2026-08-05 17:57:38', '2026-08-05 17:57:38'),
+('inv5bc4a039f013b214', 'p17781529662076677', 'a1785953698940', 'Lara kh', '2026-08-06', 200.00, 'paid', '2026-08-06 17:58:12', '2026-08-06 17:58:30'),
 ('inv6', 'p7', NULL, 'Rana Toma', '2026-04-09', 180.00, 'paid', '2026-04-23 10:17:38', '2026-04-23 10:17:38'),
 ('inv7', 'p8', NULL, 'Jad Mansour', '2026-04-02', 320.00, 'pending', '2026-04-23 10:17:38', '2026-04-23 10:17:38'),
 ('inv8', 'p9', NULL, 'Dana Farah', '2026-04-01', 200.00, 'paid', '2026-04-23 10:17:38', '2026-04-23 10:17:38'),
@@ -313,7 +327,9 @@ INSERT INTO `payments` (`id`, `invoice_id`, `patient_id`, `amount`, `payment_met
 ('pay1785234565290', 'inv1785234558589', 'p17847259248565537', 300.00, 'cash', '2026-07-28', '2026-07-28 10:29:25'),
 ('pay1785234586267', 'inv1785234558589', 'p17847259248565537', 300.00, 'card', '2026-07-28', '2026-07-28 10:29:46'),
 ('pay1785234638652', 'inv1785234633656', 'p17847259248565537', 200.00, 'cash', '2026-07-28', '2026-07-28 10:30:38'),
-('pay1785252665680', 'inv1785252653122', 'p15', 200.00, 'card', '2026-07-28', '2026-07-28 15:31:05');
+('pay1785252665680', 'inv1785252653122', 'p15', 200.00, 'card', '2026-07-28', '2026-07-28 15:31:05'),
+('pay1785267059615', 'inv1785254123477', 'p3', 200.00, 'cash', '2026-07-28', '2026-07-28 19:30:59'),
+('pay1786039110938', 'inv5bc4a039f013b214', 'p17781529662076677', 200.00, 'cash', '2026-08-06', '2026-08-06 17:58:30');
 
 -- --------------------------------------------------------
 
@@ -345,10 +361,13 @@ INSERT INTO `treatments` (`id`, `patient_id`, `doctor_id`, `date`, `description`
 ('t1785234657888', 'p17781529662076677', 'd17799719098443667', '2026-07-26', 'Cleaning & Check-up', NULL, 400.00, 'a1785172198425', '2026-07-28 10:30:57', '2026-07-28 10:30:57'),
 ('t1785234678323', 'p3', 'd17799719098443667', '2026-07-26', 'Consultation', NULL, 200.00, 'a1785177885931', '2026-07-28 10:31:18', '2026-07-28 10:31:18'),
 ('t1785252653108', 'p15', 'd17799719098443667', '2026-07-28', 'Filling', NULL, 200.00, 'a1785176956069', '2026-07-28 15:30:53', '2026-07-28 15:30:53'),
+('t1785254123475', 'p3', 'd17799719098443667', '2026-07-30', 'Filling', NULL, 200.00, 'a1785181560835', '2026-07-28 15:55:23', '2026-07-28 15:55:23'),
 ('t2', 'p2', 'd1', '2026-04-14', 'Composite filling on upper molar', 'Composite resin, bonding agent', 350.00, 'a17', '2026-04-23 10:17:38', '2026-04-23 10:17:38'),
 ('t3', 'p3', 'd3', '2026-04-13', 'Root canal treatment - first session', 'Files, irrigation solution, temporary seal', 900.00, 'a18', '2026-04-23 10:17:38', '2026-04-23 10:17:38'),
 ('t4', 'p4', 'd2', '2026-04-12', 'Teeth whitening session', 'Whitening gel, LED activation', 600.00, 'a19', '2026-04-23 10:17:38', '2026-04-23 10:17:38'),
 ('t5', 'p6', 'd3', '2026-04-10', 'Wisdom tooth extraction', 'Local anesthesia, extraction kit', 750.00, 'a21', '2026-04-23 10:17:38', '2026-04-23 10:17:38'),
+('t56846222e2925093', 'p17781529662076677', 'd17799719098443667', '2026-08-06', 'Consultation', NULL, 200.00, 'a1785953698940', '2026-08-06 17:58:12', '2026-08-06 17:58:12'),
+('t5920a5c576d64879', 'p3', 'd17799719098443667', '2026-07-29', 'Root Canal', NULL, 600.00, 'a1785267078921', '2026-08-05 17:57:38', '2026-08-05 17:57:38'),
 ('t6', 'p7', 'd2', '2026-04-09', 'Orthodontic consultation', 'X-ray review, treatment plan', 180.00, 'a22', '2026-04-23 10:17:38', '2026-04-23 10:17:38'),
 ('t7', 'p8', 'd2', '2026-04-02', 'Dental filling on lower premolar', 'Composite resin', 320.00, NULL, '2026-04-23 10:17:38', '2026-04-23 10:17:38'),
 ('t8', 'p9', 'd1', '2026-04-01', 'Routine cleaning and plaque removal', 'Scaler, polish paste', 200.00, NULL, '2026-04-23 10:17:38', '2026-04-23 10:17:38'),
@@ -483,7 +502,7 @@ CREATE TABLE `v_open_invoices` (
 ,`patient_name` varchar(201)
 ,`date` date
 ,`amount` decimal(10,2)
-,`status` enum('paid','pending','overdue')
+,`status` enum('paid','pending','overdue','unpaid','partial')
 ,`days_since_issue` int(7)
 );
 
@@ -714,448 +733,6 @@ ALTER TABLE `treatments`
   ADD CONSTRAINT `fk_treatments_appointment` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_treatments_doctor` FOREIGN KEY (`doctor_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_treatments_patient` FOREIGN KEY (`patient_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
---
--- Database: `phpmyadmin`
---
-CREATE DATABASE IF NOT EXISTS `phpmyadmin` DEFAULT CHARACTER SET utf8 COLLATE utf8_bin;
-USE `phpmyadmin`;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `pma__bookmark`
---
-
-CREATE TABLE `pma__bookmark` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `dbase` varchar(255) NOT NULL DEFAULT '',
-  `user` varchar(255) NOT NULL DEFAULT '',
-  `label` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL DEFAULT '',
-  `query` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Bookmarks';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `pma__central_columns`
---
-
-CREATE TABLE `pma__central_columns` (
-  `db_name` varchar(64) NOT NULL,
-  `col_name` varchar(64) NOT NULL,
-  `col_type` varchar(64) NOT NULL,
-  `col_length` text DEFAULT NULL,
-  `col_collation` varchar(64) NOT NULL,
-  `col_isNull` tinyint(1) NOT NULL,
-  `col_extra` varchar(255) DEFAULT '',
-  `col_default` text DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Central list of columns';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `pma__column_info`
---
-
-CREATE TABLE `pma__column_info` (
-  `id` int(5) UNSIGNED NOT NULL,
-  `db_name` varchar(64) NOT NULL DEFAULT '',
-  `table_name` varchar(64) NOT NULL DEFAULT '',
-  `column_name` varchar(64) NOT NULL DEFAULT '',
-  `comment` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL DEFAULT '',
-  `mimetype` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL DEFAULT '',
-  `transformation` varchar(255) NOT NULL DEFAULT '',
-  `transformation_options` varchar(255) NOT NULL DEFAULT '',
-  `input_transformation` varchar(255) NOT NULL DEFAULT '',
-  `input_transformation_options` varchar(255) NOT NULL DEFAULT ''
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Column information for phpMyAdmin';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `pma__designer_settings`
---
-
-CREATE TABLE `pma__designer_settings` (
-  `username` varchar(64) NOT NULL,
-  `settings_data` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Settings related to Designer';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `pma__export_templates`
---
-
-CREATE TABLE `pma__export_templates` (
-  `id` int(5) UNSIGNED NOT NULL,
-  `username` varchar(64) NOT NULL,
-  `export_type` varchar(10) NOT NULL,
-  `template_name` varchar(64) NOT NULL,
-  `template_data` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Saved export templates';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `pma__favorite`
---
-
-CREATE TABLE `pma__favorite` (
-  `username` varchar(64) NOT NULL,
-  `tables` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Favorite tables';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `pma__history`
---
-
-CREATE TABLE `pma__history` (
-  `id` bigint(20) UNSIGNED NOT NULL,
-  `username` varchar(64) NOT NULL DEFAULT '',
-  `db` varchar(64) NOT NULL DEFAULT '',
-  `table` varchar(64) NOT NULL DEFAULT '',
-  `timevalue` timestamp NOT NULL DEFAULT current_timestamp(),
-  `sqlquery` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='SQL history for phpMyAdmin';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `pma__navigationhiding`
---
-
-CREATE TABLE `pma__navigationhiding` (
-  `username` varchar(64) NOT NULL,
-  `item_name` varchar(64) NOT NULL,
-  `item_type` varchar(64) NOT NULL,
-  `db_name` varchar(64) NOT NULL,
-  `table_name` varchar(64) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Hidden items of navigation tree';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `pma__pdf_pages`
---
-
-CREATE TABLE `pma__pdf_pages` (
-  `db_name` varchar(64) NOT NULL DEFAULT '',
-  `page_nr` int(10) UNSIGNED NOT NULL,
-  `page_descr` varchar(50) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL DEFAULT ''
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='PDF relation pages for phpMyAdmin';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `pma__recent`
---
-
-CREATE TABLE `pma__recent` (
-  `username` varchar(64) NOT NULL,
-  `tables` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Recently accessed tables';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `pma__relation`
---
-
-CREATE TABLE `pma__relation` (
-  `master_db` varchar(64) NOT NULL DEFAULT '',
-  `master_table` varchar(64) NOT NULL DEFAULT '',
-  `master_field` varchar(64) NOT NULL DEFAULT '',
-  `foreign_db` varchar(64) NOT NULL DEFAULT '',
-  `foreign_table` varchar(64) NOT NULL DEFAULT '',
-  `foreign_field` varchar(64) NOT NULL DEFAULT ''
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Relation table';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `pma__savedsearches`
---
-
-CREATE TABLE `pma__savedsearches` (
-  `id` int(5) UNSIGNED NOT NULL,
-  `username` varchar(64) NOT NULL DEFAULT '',
-  `db_name` varchar(64) NOT NULL DEFAULT '',
-  `search_name` varchar(64) NOT NULL DEFAULT '',
-  `search_data` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Saved searches';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `pma__table_coords`
---
-
-CREATE TABLE `pma__table_coords` (
-  `db_name` varchar(64) NOT NULL DEFAULT '',
-  `table_name` varchar(64) NOT NULL DEFAULT '',
-  `pdf_page_number` int(11) NOT NULL DEFAULT 0,
-  `x` float UNSIGNED NOT NULL DEFAULT 0,
-  `y` float UNSIGNED NOT NULL DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Table coordinates for phpMyAdmin PDF output';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `pma__table_info`
---
-
-CREATE TABLE `pma__table_info` (
-  `db_name` varchar(64) NOT NULL DEFAULT '',
-  `table_name` varchar(64) NOT NULL DEFAULT '',
-  `display_field` varchar(64) NOT NULL DEFAULT ''
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Table information for phpMyAdmin';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `pma__table_uiprefs`
---
-
-CREATE TABLE `pma__table_uiprefs` (
-  `username` varchar(64) NOT NULL,
-  `db_name` varchar(64) NOT NULL,
-  `table_name` varchar(64) NOT NULL,
-  `prefs` text NOT NULL,
-  `last_update` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Tables'' UI preferences';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `pma__tracking`
---
-
-CREATE TABLE `pma__tracking` (
-  `db_name` varchar(64) NOT NULL,
-  `table_name` varchar(64) NOT NULL,
-  `version` int(10) UNSIGNED NOT NULL,
-  `date_created` datetime NOT NULL,
-  `date_updated` datetime NOT NULL,
-  `schema_snapshot` text NOT NULL,
-  `schema_sql` text DEFAULT NULL,
-  `data_sql` longtext DEFAULT NULL,
-  `tracking` set('UPDATE','REPLACE','INSERT','DELETE','TRUNCATE','CREATE DATABASE','ALTER DATABASE','DROP DATABASE','CREATE TABLE','ALTER TABLE','RENAME TABLE','DROP TABLE','CREATE INDEX','DROP INDEX','CREATE VIEW','ALTER VIEW','DROP VIEW') DEFAULT NULL,
-  `tracking_active` int(1) UNSIGNED NOT NULL DEFAULT 1
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Database changes tracking for phpMyAdmin';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `pma__userconfig`
---
-
-CREATE TABLE `pma__userconfig` (
-  `username` varchar(64) NOT NULL,
-  `timevalue` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `config_data` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='User preferences storage for phpMyAdmin';
-
---
--- Dumping data for table `pma__userconfig`
---
-
-INSERT INTO `pma__userconfig` (`username`, `timevalue`, `config_data`) VALUES
-('root', '2026-04-23 09:58:38', '{\"Console\\/Mode\":\"collapse\",\"lang\":\"he\"}');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `pma__usergroups`
---
-
-CREATE TABLE `pma__usergroups` (
-  `usergroup` varchar(64) NOT NULL,
-  `tab` varchar(64) NOT NULL,
-  `allowed` enum('Y','N') NOT NULL DEFAULT 'N'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='User groups with configured menu items';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `pma__users`
---
-
-CREATE TABLE `pma__users` (
-  `username` varchar(64) NOT NULL,
-  `usergroup` varchar(64) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin COMMENT='Users and their assignments to user groups';
-
---
--- Indexes for dumped tables
---
-
---
--- Indexes for table `pma__bookmark`
---
-ALTER TABLE `pma__bookmark`
-  ADD PRIMARY KEY (`id`);
-
---
--- Indexes for table `pma__central_columns`
---
-ALTER TABLE `pma__central_columns`
-  ADD PRIMARY KEY (`db_name`,`col_name`);
-
---
--- Indexes for table `pma__column_info`
---
-ALTER TABLE `pma__column_info`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `db_name` (`db_name`,`table_name`,`column_name`);
-
---
--- Indexes for table `pma__designer_settings`
---
-ALTER TABLE `pma__designer_settings`
-  ADD PRIMARY KEY (`username`);
-
---
--- Indexes for table `pma__export_templates`
---
-ALTER TABLE `pma__export_templates`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `u_user_type_template` (`username`,`export_type`,`template_name`);
-
---
--- Indexes for table `pma__favorite`
---
-ALTER TABLE `pma__favorite`
-  ADD PRIMARY KEY (`username`);
-
---
--- Indexes for table `pma__history`
---
-ALTER TABLE `pma__history`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `username` (`username`,`db`,`table`,`timevalue`);
-
---
--- Indexes for table `pma__navigationhiding`
---
-ALTER TABLE `pma__navigationhiding`
-  ADD PRIMARY KEY (`username`,`item_name`,`item_type`,`db_name`,`table_name`);
-
---
--- Indexes for table `pma__pdf_pages`
---
-ALTER TABLE `pma__pdf_pages`
-  ADD PRIMARY KEY (`page_nr`),
-  ADD KEY `db_name` (`db_name`);
-
---
--- Indexes for table `pma__recent`
---
-ALTER TABLE `pma__recent`
-  ADD PRIMARY KEY (`username`);
-
---
--- Indexes for table `pma__relation`
---
-ALTER TABLE `pma__relation`
-  ADD PRIMARY KEY (`master_db`,`master_table`,`master_field`),
-  ADD KEY `foreign_field` (`foreign_db`,`foreign_table`);
-
---
--- Indexes for table `pma__savedsearches`
---
-ALTER TABLE `pma__savedsearches`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `u_savedsearches_username_dbname` (`username`,`db_name`,`search_name`);
-
---
--- Indexes for table `pma__table_coords`
---
-ALTER TABLE `pma__table_coords`
-  ADD PRIMARY KEY (`db_name`,`table_name`,`pdf_page_number`);
-
---
--- Indexes for table `pma__table_info`
---
-ALTER TABLE `pma__table_info`
-  ADD PRIMARY KEY (`db_name`,`table_name`);
-
---
--- Indexes for table `pma__table_uiprefs`
---
-ALTER TABLE `pma__table_uiprefs`
-  ADD PRIMARY KEY (`username`,`db_name`,`table_name`);
-
---
--- Indexes for table `pma__tracking`
---
-ALTER TABLE `pma__tracking`
-  ADD PRIMARY KEY (`db_name`,`table_name`,`version`);
-
---
--- Indexes for table `pma__userconfig`
---
-ALTER TABLE `pma__userconfig`
-  ADD PRIMARY KEY (`username`);
-
---
--- Indexes for table `pma__usergroups`
---
-ALTER TABLE `pma__usergroups`
-  ADD PRIMARY KEY (`usergroup`,`tab`,`allowed`);
-
---
--- Indexes for table `pma__users`
---
-ALTER TABLE `pma__users`
-  ADD PRIMARY KEY (`username`,`usergroup`);
-
---
--- AUTO_INCREMENT for dumped tables
---
-
---
--- AUTO_INCREMENT for table `pma__bookmark`
---
-ALTER TABLE `pma__bookmark`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `pma__column_info`
---
-ALTER TABLE `pma__column_info`
-  MODIFY `id` int(5) UNSIGNED NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `pma__export_templates`
---
-ALTER TABLE `pma__export_templates`
-  MODIFY `id` int(5) UNSIGNED NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `pma__history`
---
-ALTER TABLE `pma__history`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `pma__pdf_pages`
---
-ALTER TABLE `pma__pdf_pages`
-  MODIFY `page_nr` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `pma__savedsearches`
---
-ALTER TABLE `pma__savedsearches`
-  MODIFY `id` int(5) UNSIGNED NOT NULL AUTO_INCREMENT;
---
--- Database: `test`
---
-CREATE DATABASE IF NOT EXISTS `test` DEFAULT CHARACTER SET latin1 COLLATE latin1_swedish_ci;
-USE `test`;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
