@@ -22,6 +22,7 @@ const authorizeStatusChange = (actor, appointment, nextStatus) => {
   }
 
   const isManager = actor.role === "manager";
+
   const isAssignedDoctor =
     actor.role === "doctor" && actor.id === appointment.doctor_id;
 
@@ -193,36 +194,48 @@ const completeAppointment = async ({ database, appointmentId, actor }) => {
       );
     }
 
-    const [existingInvoices] = await connection.query(
-      `SELECT id
-       FROM invoices
-       WHERE appointment_id = ?
-       LIMIT 1`,
-      [appointmentId],
+    const [automaticInvoicingSettings] = await connection.query(
+      `SELECT setting_value
+         FROM clinic_settings
+         WHERE setting_key = 'automatic_invoicing'
+         LIMIT 1`,
     );
 
-    if (existingInvoices.length === 0) {
-      await connection.query(
-        `INSERT INTO invoices
-         (
-           id,
-           appointment_id,
-           patient_id,
-           patient_name,
-           date,
-           amount,
-           status
-         )
-         VALUES (?, ?, ?, ?, ?, ?, 'unpaid')`,
-        [
-          createEntityId("inv"),
-          appointmentId,
-          appointment.patient_id,
-          appointment.patient_name,
-          appointment.date,
-          treatmentCost,
-        ],
+    const automaticInvoicingEnabled =
+      String(automaticInvoicingSettings[0]?.setting_value ?? "1") === "1";
+
+    if (automaticInvoicingEnabled) {
+      const [existingInvoices] = await connection.query(
+        `SELECT id
+           FROM invoices
+           WHERE appointment_id = ?
+           LIMIT 1`,
+        [appointmentId],
       );
+
+      if (existingInvoices.length === 0) {
+        await connection.query(
+          `INSERT INTO invoices
+           (
+             id,
+             appointment_id,
+             patient_id,
+             patient_name,
+             date,
+             amount,
+             status
+           )
+           VALUES (?, ?, ?, ?, ?, ?, 'unpaid')`,
+          [
+            createEntityId("inv"),
+            appointmentId,
+            appointment.patient_id,
+            appointment.patient_name,
+            appointment.date,
+            treatmentCost,
+          ],
+        );
+      }
     }
 
     await connection.commit();

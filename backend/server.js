@@ -1,6 +1,4 @@
 const path = require("path");
-const reportsRoutes = require("./routes/reportsRoutes");
-const settingsRoutes = require("./routes/settingsRoutes");
 
 require("dotenv").config({
   path: path.join(__dirname, ".env"),
@@ -17,6 +15,8 @@ const appointmentsRoutes = require("./routes/appointmentsRoutes");
 const treatmentsRoutes = require("./routes/treatmentsRoutes");
 const invoicesRoutes = require("./routes/invoicesRoutes");
 const medicalRecordsRoutes = require("./routes/medicalRecordsRoutes");
+const reportsRoutes = require("./routes/reportsRoutes");
+const settingsRoutes = require("./routes/settingsRoutes");
 const availabilityRoutes = require("./routes/availabilityRoutes");
 
 const app = express();
