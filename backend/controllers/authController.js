@@ -2,6 +2,23 @@ const bcrypt = require("bcrypt");
 const pool = require("../database/db");
 const generateId = require("../utils/generateId");
 
+const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{6,8}$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const NAME_REGEX = /^[\p{L}\s'-]+$/u;
+const ID_REGEX = /^\d{9}$/;
+
+const isValidPhone = (phone) => {
+  if (!phone) {
+    return true;
+  }
+
+  const normalizedPhone = String(phone).replace(/[\s()-]/g, "");
+
+  return (
+    /^0\d{8,9}$/.test(normalizedPhone) || /^\+972\d{8,9}$/.test(normalizedPhone)
+  );
+};
+
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -63,40 +80,170 @@ const registerPatient = async (req, res) => {
     const { email, password, firstName, lastName, phone, birthDate, idNumber } =
       req.body;
 
-    if (!email || !password || !firstName || !lastName || !idNumber) {
+    const normalizedEmail = String(email || "")
+      .trim()
+      .toLowerCase();
+
+    const normalizedFirstName = String(firstName || "").trim();
+    const normalizedLastName = String(lastName || "").trim();
+    const normalizedPhone = String(phone || "").trim();
+    const normalizedIdNumber = String(idNumber || "").trim();
+
+    if (!normalizedFirstName) {
       return res.status(400).json({
-        message: "Missing required fields",
+        message: "First name is required",
+        field: "firstName",
       });
     }
 
-    const [exists] = await pool.query(
-      "SELECT id FROM users WHERE email = ? OR id_number = ?",
-      [email, idNumber],
+    if (
+      normalizedFirstName.length < 2 ||
+      !NAME_REGEX.test(normalizedFirstName)
+    ) {
+      return res.status(400).json({
+        message: "Please enter a valid first name",
+        field: "firstName",
+      });
+    }
+
+    if (!normalizedLastName) {
+      return res.status(400).json({
+        message: "Last name is required",
+        field: "lastName",
+      });
+    }
+
+    if (normalizedLastName.length < 2 || !NAME_REGEX.test(normalizedLastName)) {
+      return res.status(400).json({
+        message: "Please enter a valid last name",
+        field: "lastName",
+      });
+    }
+
+    if (!normalizedEmail) {
+      return res.status(400).json({
+        message: "Email is required",
+        field: "email",
+      });
+    }
+
+    if (!EMAIL_REGEX.test(normalizedEmail)) {
+      return res.status(400).json({
+        message: "Please enter a valid email address",
+        field: "email",
+      });
+    }
+
+    if (!normalizedIdNumber) {
+      return res.status(400).json({
+        message: "ID number is required",
+        field: "idNumber",
+      });
+    }
+
+    if (!ID_REGEX.test(normalizedIdNumber)) {
+      return res.status(400).json({
+        message: "ID number must contain exactly 9 digits",
+        field: "idNumber",
+      });
+    }
+
+    if (!password) {
+      return res.status(400).json({
+        message: "Password is required",
+        field: "password",
+      });
+    }
+
+    if (!PASSWORD_REGEX.test(password)) {
+      return res.status(400).json({
+        message:
+          "Password must be 6-8 characters and include an uppercase letter and a number",
+        field: "password",
+      });
+    }
+
+    if (normalizedPhone && !isValidPhone(normalizedPhone)) {
+      return res.status(400).json({
+        message: "Please enter a valid phone number",
+        field: "phone",
+      });
+    }
+
+    if (birthDate) {
+      const parsedBirthDate = new Date(`${birthDate}T00:00:00`);
+
+      const today = new Date();
+
+      today.setHours(0, 0, 0, 0);
+
+      if (Number.isNaN(parsedBirthDate.getTime()) || parsedBirthDate > today) {
+        return res.status(400).json({
+          message: "Please enter a valid birth date",
+          field: "birthDate",
+        });
+      }
+    }
+
+    const [emailExists] = await pool.query(
+      `SELECT id
+       FROM users
+       WHERE LOWER(email) = ?
+       LIMIT 1`,
+      [normalizedEmail],
     );
 
-    if (exists.length > 0) {
+    if (emailExists.length > 0) {
       return res.status(409).json({
-        message: "User already exists",
+        message: "Email is already registered",
+        field: "email",
+      });
+    }
+
+    const [idExists] = await pool.query(
+      `SELECT id
+       FROM users
+       WHERE id_number = ?
+       LIMIT 1`,
+      [normalizedIdNumber],
+    );
+
+    if (idExists.length > 0) {
+      return res.status(409).json({
+        message: "ID number is already registered",
+        field: "idNumber",
       });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+
     const id = generateId("p");
 
     await pool.query(
       `INSERT INTO users
-       (id, email, password, role, first_name, last_name, phone, birth_date, id_number, status)
+       (
+         id,
+         email,
+         password,
+         role,
+         first_name,
+         last_name,
+         phone,
+         birth_date,
+         id_number,
+         status
+       )
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
-        email,
+        normalizedEmail,
         hashedPassword,
         "patient",
-        firstName,
-        lastName,
-        phone || null,
+        normalizedFirstName,
+        normalizedLastName,
+        normalizedPhone || null,
         birthDate || null,
-        idNumber,
+        normalizedIdNumber,
         "active",
       ],
     );
@@ -124,7 +271,14 @@ const getMe = async (req, res) => {
     }
 
     const [users] = await pool.query(
-      `SELECT id, email, role, first_name, last_name, phone, avatar
+      `SELECT
+         id,
+         email,
+         role,
+         first_name,
+         last_name,
+         phone,
+         avatar
        FROM users
        WHERE id = ?`,
       [req.session.user.id],
