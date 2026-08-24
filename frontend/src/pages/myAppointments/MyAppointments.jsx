@@ -5,6 +5,7 @@ import { CalendarDays, Clock3, MapPin, UserRound, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import Sidebar from "../../components/sidebar/Sidebar";
+import AppModal from "../../components/appModal/AppModal";
 import styles from "./myAppointments.module.css";
 
 const APPOINTMENTS_PER_PAGE = 5;
@@ -17,6 +18,8 @@ function MyAppointments() {
   const [activeTab, setActiveTab] = useState("upcoming");
   const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState("");
+
+  const [cancelAppointmentId, setCancelAppointmentId] = useState(null);
 
   const loadAppointments = async () => {
     if (!user?.id) return;
@@ -38,12 +41,20 @@ function MyAppointments() {
     setCurrentPage(1);
   }, [activeTab]);
 
-  const cancelAppointment = async (id) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to cancel this appointment?",
-    );
+  const openCancelModal = (id) => {
+    setCancelAppointmentId(id);
+  };
 
-    if (!confirmed) return;
+  const closeCancelModal = () => {
+    setCancelAppointmentId(null);
+  };
+
+  const cancelAppointment = async () => {
+    const id = cancelAppointmentId;
+
+    if (!id) return;
+
+    setCancelAppointmentId(null);
 
     try {
       await api.patch(`/appointments/${id}/status`, {
@@ -189,7 +200,7 @@ function MyAppointments() {
                       appointment.status !== "completed" && (
                         <button
                           className={styles.cancelIcon}
-                          onClick={() => cancelAppointment(appointment.id)}
+                          onClick={() => openCancelModal(appointment.id)}
                           title="Cancel appointment"
                         >
                           <X size={18} />
@@ -273,6 +284,18 @@ function MyAppointments() {
           )}
         </section>
       </main>
+
+      <AppModal
+        open={Boolean(cancelAppointmentId)}
+        title="Cancel Appointment"
+        message="Are you sure you want to cancel this appointment?"
+        confirmText="Yes, Cancel"
+        cancelText="Keep Appointment"
+        showCancel
+        danger
+        onConfirm={cancelAppointment}
+        onCancel={closeCancelModal}
+      />
     </div>
   );
 }

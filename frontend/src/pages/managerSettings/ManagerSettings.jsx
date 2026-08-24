@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import {
   Bell,
   Clock3,
-  Mail,
   Pencil,
   Plus,
   Settings,
@@ -584,25 +583,6 @@ function ManagerSettings() {
                 </div>
               ))}
             </div>
-          </section>
-
-          <section className={styles.card}>
-            <div className={styles.cardHeader}>
-              <Mail size={21} />
-
-              <div>
-                <h2>Email Templates</h2>
-                <p>Customize automated emails</p>
-              </div>
-            </div>
-
-            <div className={styles.templateBox}>
-              Appointment Confirmation Email
-            </div>
-
-            <div className={styles.templateBox}>Appointment Reminder Email</div>
-
-            <div className={styles.templateBox}>Invoice Email Template</div>
           </section>
         </section>
       </main>

@@ -8,6 +8,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import Sidebar from "../../components/sidebar/Sidebar";
+import AppModal from "../../components/appModal/AppModal";
 import styles from "./managerAppointments.module.css";
 
 const APPOINTMENTS_PER_PAGE = 7;
@@ -78,6 +79,8 @@ function ManagerAppointments() {
   const [dateFilter, setDateFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [editingAppointment, setEditingAppointment] = useState(null);
+
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
 
   const [editForm, setEditForm] = useState({
     date: "",
@@ -207,11 +210,8 @@ function ManagerAppointments() {
     const search = searchTerm.toLowerCase();
 
     const patientName = String(appointment.patient_name || "").toLowerCase();
-
     const doctorName = String(appointment.doctor_name || "").toLowerCase();
-
     const treatment = String(appointment.treatment_type || "").toLowerCase();
-
     const status = String(appointment.status || "").toLowerCase();
 
     const appointmentDate = formatInputDate(appointment.date);
@@ -259,6 +259,7 @@ function ManagerAppointments() {
 
   const closeEditModal = () => {
     setEditingAppointment(null);
+    setCancelModalOpen(false);
 
     setEditForm({
       date: "",
@@ -314,48 +315,8 @@ function ManagerAppointments() {
     return appointmentDateTime <= new Date();
   };
 
-  const handleUpdateAppointment = async (e) => {
-    e.preventDefault();
-
+  const saveAppointmentChanges = async () => {
     if (!editingAppointment?.id) return;
-
-    if (editForm.status !== "cancelled") {
-      const selectedDate = getEditSelectedDate();
-
-      if (!selectedDate) {
-        setError("Please select a valid appointment date");
-        return;
-      }
-
-      if (selectedDate.getDay() === 6) {
-        setError("The clinic is closed on Saturday");
-        return;
-      }
-
-      if (isIsraeliHoliday(selectedDate)) {
-        setError("The clinic is closed on this holiday");
-        return;
-      }
-
-      if (doesEditedAppointmentEndAfterClosing()) {
-        setError(
-          `The appointment must end before the clinic closes at ${getEditClinicClosingTime()}`,
-        );
-
-        return;
-      }
-    }
-
-    if (
-      editForm.status === "cancelled" &&
-      editingAppointment.status !== "cancelled"
-    ) {
-      const confirmed = window.confirm(
-        "Are you sure you want to cancel this appointment?",
-      );
-
-      if (!confirmed) return;
-    }
 
     try {
       await api.put(`/appointments/${editingAppointment.id}`, {
@@ -393,6 +354,54 @@ function ManagerAppointments() {
           "Failed to update appointment",
       );
     }
+  };
+
+  const handleUpdateAppointment = async (e) => {
+    e.preventDefault();
+
+    if (!editingAppointment?.id) return;
+
+    if (editForm.status !== "cancelled") {
+      const selectedDate = getEditSelectedDate();
+
+      if (!selectedDate) {
+        setError("Please select a valid appointment date");
+        return;
+      }
+
+      if (selectedDate.getDay() === 6) {
+        setError("The clinic is closed on Saturday");
+        return;
+      }
+
+      if (isIsraeliHoliday(selectedDate)) {
+        setError("The clinic is closed on this holiday");
+        return;
+      }
+
+      if (doesEditedAppointmentEndAfterClosing()) {
+        setError(
+          `The appointment must end before the clinic closes at ${getEditClinicClosingTime()}`,
+        );
+
+        return;
+      }
+    }
+
+    if (
+      editForm.status === "cancelled" &&
+      editingAppointment.status !== "cancelled"
+    ) {
+      setCancelModalOpen(true);
+      return;
+    }
+
+    await saveAppointmentChanges();
+  };
+
+  const confirmCancelAppointment = async () => {
+    setCancelModalOpen(false);
+    await saveAppointmentChanges();
   };
 
   const clearFilters = () => {
@@ -657,7 +666,6 @@ function ManagerAppointments() {
                     required
                   >
                     <option value="scheduled">Scheduled</option>
-
                     <option value="confirmed">Confirmed</option>
 
                     <option
@@ -696,6 +704,18 @@ function ManagerAppointments() {
           </div>
         )}
       </main>
+
+      <AppModal
+        open={cancelModalOpen}
+        title="Cancel Appointment"
+        message="Are you sure you want to cancel this appointment?"
+        confirmText="Yes, Cancel"
+        cancelText="Keep Appointment"
+        showCancel
+        danger
+        onConfirm={confirmCancelAppointment}
+        onCancel={() => setCancelModalOpen(false)}
+      />
     </div>
   );
 }

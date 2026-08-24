@@ -1,5 +1,8 @@
 const pool = require("../database/db");
 const {
+  sendAppointmentConfirmationEmail,
+} = require("../services/emailService");
+const {
   AppointmentStatusError,
   changeAppointmentStatus,
 } = require("../services/appointmentStatusService");
@@ -113,6 +116,71 @@ const getClinicClosingTimeForDate = async (date) => {
   }
 
   return "19:00:00";
+};
+
+const sendAppointmentConfirmationNotification = async ({
+  patientId,
+  patientName,
+  doctorName,
+  date,
+  time,
+  treatmentType,
+}) => {
+  const [settingRows] = await pool.query(
+    `SELECT setting_key, setting_value
+     FROM clinic_settings
+     WHERE setting_key IN ('email_notifications', 'clinic_name')`,
+  );
+
+  const settings = {};
+
+  settingRows.forEach((row) => {
+    settings[row.setting_key] = row.setting_value;
+  });
+
+  if (String(settings.email_notifications || "0") !== "1") {
+    return;
+  }
+
+  const [patients] = await pool.query(
+    `SELECT email, first_name, last_name
+     FROM users
+     WHERE id = ?
+       AND role = 'patient'
+     LIMIT 1`,
+    [patientId],
+  );
+
+  if (patients.length === 0 || !patients[0].email) {
+    return;
+  }
+
+  const patient = patients[0];
+
+  const finalPatientName =
+    `${patient.first_name || ""} ${patient.last_name || ""}`.trim() ||
+    patientName ||
+    "Patient";
+
+  const clinicName = settings.clinic_name || "Dental Clinic";
+
+  const formattedDate = formatSqlDate(date);
+  const [year, month, day] = formattedDate.split("-");
+
+  const displayDate =
+    year && month && day ? `${day}/${month}/${year}` : formattedDate;
+
+  const displayTime = normalizeTime(time).slice(0, 5);
+
+  await sendAppointmentConfirmationEmail({
+    to: patient.email,
+    clinicName,
+    patientName: finalPatientName,
+    doctorName,
+    treatmentType,
+    date: displayDate,
+    time: displayTime,
+  });
 };
 
 const getDoctorAppointmentCounts = async (req, res) => {
@@ -424,6 +492,19 @@ const createAppointment = async (req, res) => {
         notes || null,
       ],
     );
+
+    try {
+      await sendAppointmentConfirmationNotification({
+        patientId,
+        patientName,
+        doctorName,
+        date,
+        time,
+        treatmentType: finalTreatmentType,
+      });
+    } catch (emailError) {
+      console.error("APPOINTMENT CONFIRMATION EMAIL ERROR:", emailError);
+    }
 
     res.status(201).json({
       message: "Appointment created successfully",
